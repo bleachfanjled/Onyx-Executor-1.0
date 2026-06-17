@@ -1,0 +1,28 @@
+{
+  "name": "ChangelogEntry",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "release_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "is_latest": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "version",
+    "release_date",
+    "notes"
+  ]
+}

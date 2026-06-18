@@ -15,6 +15,7 @@ export default function Nav() {
     { label: "Home", path: "/" },
     { label: "Download", path: "/download" },
     { label: "Changelog", path: "/changelog" },
+    { label: "Code", path: "/code" },
   ];
 
   return (

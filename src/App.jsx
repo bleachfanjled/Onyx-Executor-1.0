@@ -9,6 +9,7 @@ import Layout from './components/Layout';
 import Home from './pages/Home';
 import Download from './pages/Download';
 import Changelog from './pages/Changelog';
+import ExecutorCode from './pages/ExecutorCode';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/download" element={<Download />} />
               <Route path="/changelog" element={<Changelog />} />
+              <Route path="/code" element={<ExecutorCode />} />
             </Route>
             <Route path="*" element={<PageNotFound />} />
           </Routes>

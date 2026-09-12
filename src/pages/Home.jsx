@@ -79,7 +79,7 @@ export default function Home() {
               className="font-mono text-xs"
               style={{ color: "#959595", letterSpacing: "0.1em" }}
             >
-              VERSION 2.1 — WINDOWS
+              VERSION 1.0 — WINDOWS
             </span>
             <div
               className="w-1.5 h-1.5 rounded-full"

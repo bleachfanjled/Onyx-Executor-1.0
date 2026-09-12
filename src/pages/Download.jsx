@@ -6,7 +6,7 @@ import rendererJs from "./onyx-assets/renderer.js.txt?raw";
 
 const VERSION = "2.1.0";
 const SHA256 = "a3f8c2e1d74b5960fe2318a0c9d47b8e6f1205a3c8d9e7f04b2163a5c8d9e7f0";
-const FILE_SIZE = "4.2 MB";
+const FILE_SIZE = "1.5 MB";
 
 export default function DownloadPage() {
   const [downloading, setDownloading] = useState(false);

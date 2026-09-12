@@ -230,7 +230,6 @@ export default function DownloadPage() {
                     backgroundColor: confirmed ? "#FFFFFF" : "transparent",
                     marginTop: "1px",
                   }}
-                  onClick={() => setConfirmed((c) => !c)}
                 >
                   {confirmed && (
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">

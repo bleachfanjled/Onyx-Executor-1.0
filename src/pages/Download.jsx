@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Download, Shield, Monitor } from "lucide-react";
+import { Download, Shield, Monitor, X, ShieldCheck, AlertTriangle } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
 const VERSION = "2.1.0";
@@ -37,6 +37,7 @@ export default function DownloadPage() {
         setTimeout(() => {
           setDownloading(false);
           setDone(true);
+          setShowSafetyModal(true);
           window.location.href = release.downloadUrl;
         }, 300);
       } else {
@@ -46,6 +47,7 @@ export default function DownloadPage() {
   };
 
   const [copied, setCopied] = useState(false);
+  const [showSafetyModal, setShowSafetyModal] = useState(false);
   const copyHash = () => {
     navigator.clipboard.writeText(SHA256).then(() => {
       setCopied(true);
@@ -213,6 +215,127 @@ export default function DownloadPage() {
           </p>
         </div>
       </div>
+
+      {/* Safety Modal */}
+      {showSafetyModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center px-6"
+          style={{ backgroundColor: "rgba(5,5,5,0.85)", backdropFilter: "blur(8px)" }}
+          onClick={() => setShowSafetyModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-lg"
+            style={{
+              backgroundColor: "#0D0D0D",
+              border: "1px solid #1A1A1A",
+              boxShadow: "0 0 0 1px rgba(255,255,255,0.02), 0 24px 80px rgba(0,0,0,0.6)",
+            }}
+          >
+            {/* Close */}
+            <button
+              onClick={() => setShowSafetyModal(false)}
+              aria-label="Close"
+              className="absolute top-0 right-0 w-12 h-12 flex items-center justify-center transition-sharp"
+              style={{ color: "#3A3A3A" }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "#FFFFFF"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "#3A3A3A"; }}
+            >
+              <X size={16} />
+            </button>
+
+            {/* Header strip */}
+            <div
+              className="flex items-center gap-3 px-8 pt-8 pb-6"
+              style={{ borderBottom: "1px solid #1A1A1A" }}
+            >
+              <div
+                className="flex items-center justify-center shrink-0"
+                style={{ width: "40px", height: "40px", border: "1px solid #1A1A1A", backgroundColor: "#050505" }}
+              >
+                <ShieldCheck size={18} style={{ color: "#FFFFFF" }} />
+              </div>
+              <div>
+                <p className="font-mono text-xs" style={{ color: "#3A3A3A", letterSpacing: "0.12em" }}>
+                  DOWNLOAD STARTED
+                </p>
+                <h3
+                  className="font-heading text-white"
+                  style={{ fontWeight: 700, fontSize: "20px", letterSpacing: "-0.03em" }}
+                >
+                  Verify Your Source
+                </h3>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-8 py-7">
+              <p
+                className="font-body mb-6"
+                style={{ color: "#959595", fontSize: "14px", lineHeight: 1.6 }}
+              >
+                Your download has started. For your security, only run Onyx from official sources.
+                Third-party reuploads may contain malware or modified binaries.
+              </p>
+
+              {/* Official source block */}
+              <div
+                className="mb-4"
+                style={{ border: "1px solid #1A1A1A", backgroundColor: "#050505", padding: "16px 18px" }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield size={12} style={{ color: "#FFFFFF" }} />
+                  <span className="font-mono text-xs" style={{ color: "#FFFFFF", letterSpacing: "0.1em" }}>
+                    OFFICIAL DOMAIN
+                  </span>
+                </div>
+                <p className="font-mono text-sm" style={{ color: "#959595", letterSpacing: "0.02em" }}>
+                  The safest place to download Onyx will be listed here.
+                </p>
+                <p className="font-mono text-xs mt-1" style={{ color: "#3A3A3A", letterSpacing: "0.06em" }}>
+                  Domain to be announced.
+                </p>
+              </div>
+
+              {/* Warning block */}
+              <div
+                className="flex items-start gap-3"
+                style={{ padding: "14px 16px", border: "1px solid #1A1A1A", backgroundColor: "#050505" }}
+              >
+                <AlertTriangle size={14} style={{ color: "#959595", marginTop: "2px", flexShrink: 0 }} />
+                <p className="font-mono text-xs" style={{ color: "#959595", lineHeight: 1.6, letterSpacing: "0.02em" }}>
+                  Never download Onyx from mirror sites, Discord attachments, or unverified links.
+                  When in doubt, compare the SHA-256 hash above before running.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div
+              className="flex items-center justify-end gap-3 px-8 py-5"
+              style={{ borderTop: "1px solid #1A1A1A" }}
+            >
+              <button
+                onClick={() => setShowSafetyModal(false)}
+                className="font-heading uppercase transition-sharp focus:outline-white"
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  color: "#050505",
+                  border: "1px solid #FFFFFF",
+                  padding: "12px 28px",
+                  fontWeight: 700,
+                  fontSize: "12px",
+                  letterSpacing: "0.1em",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#E0E0E0"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#FFFFFF"; }}
+              >
+                GOT IT
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

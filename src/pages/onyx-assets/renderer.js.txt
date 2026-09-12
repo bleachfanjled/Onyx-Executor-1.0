@@ -389,20 +389,22 @@ function handleExecute() {
   if (!clientAttached) {
     log("Attach to Roblox before executing.", "#FFFFFF");
     showNotification("Attach to Roblox before executing.");
-    setStatus("Idle", false);
     return;
   }
 
-  setStatus("Executing", true);
-  log("Executing script...", "#FFFFFF");
-  showNotification("Successfully Executed");
-  setTimeout(() => {
-    if (clientAttached) {
-      setStatus("Attached", true);
-    } else {
-      setStatus("Idle", false);
-    }
-  }, 2000);
+  // ─────────────────────────────────────────────────────────────
+  // EXECUTION PIPELINE — implement here
+  // Preconditions already handled above:
+  //   - script: non-empty string from the active editor tab
+  //   - clientAttached: true (Roblox process is attached)
+  // Available helpers:
+  //   - log(msg, color)        → writes a line to the console pane
+  //   - showNotification(msg)  → toast (top-right)
+  //   - setStatus(text, active)→ updates the bottom-right status indicator
+  // ─────────────────────────────────────────────────────────────
+
+  log("Execution not implemented.", "#3A3A3A");
+  showNotification("Execution not implemented.");
 }
 
 function handleCopy() {

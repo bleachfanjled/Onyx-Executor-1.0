@@ -187,7 +187,7 @@ bool ManualMapAndHijack(HANDLE hProc, DWORD targetThreadId, BYTE* pSrcData) {
 
 const state = {
   tabs: [
-    { id: crypto.randomUUID(), name: "New Script", content: sampleChecklistPayload }
+    { id: crypto.randomUUID(), name: "New Script", content: "" }
   ],
 };
 

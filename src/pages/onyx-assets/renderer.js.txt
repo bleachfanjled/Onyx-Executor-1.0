@@ -435,6 +435,31 @@ function handleDownload() {
   log("Script saved as onyx_script.lua.");
 }
 
+function handleLoad() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".lua,.txt,.luac";
+  input.addEventListener("change", (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      saveActiveTabContent();
+      const activeTab = getActiveTab();
+      if (!activeTab) return;
+      activeTab.content = String(e.target.result || "");
+      activeTab.name = file.name.replace(/\.[^.]+$/, "") || "Loaded Script";
+      editor.value = activeTab.content;
+      renderTabs();
+      log(`Loaded ${file.name}.`);
+      showNotification(`Loaded ${file.name}`);
+    };
+    reader.onerror = () => log("Failed to read file.", "#3A3A3A");
+    reader.readAsText(file);
+  });
+  input.click();
+}
+
 function handleClear() {
   editor.value = "";
   saveActiveTabContent();

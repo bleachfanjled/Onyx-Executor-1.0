@@ -87,10 +87,6 @@ export default function DownloadPage() {
             </span>
             <div style={{ width: "1px", height: "12px", backgroundColor: "#1A1A1A" }} aria-hidden="true" />
             <span className="font-mono text-xs" style={{ color: "#959595", letterSpacing: "0.1em" }}>
-              {fileSize}
-            </span>
-            <div style={{ width: "1px", height: "12px", backgroundColor: "#1A1A1A" }} aria-hidden="true" />
-            <span className="font-mono text-xs" style={{ color: "#959595", letterSpacing: "0.1em" }}>
               {decompressedSize}
             </span>
           </div>

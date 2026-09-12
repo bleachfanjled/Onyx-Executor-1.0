@@ -254,6 +254,14 @@ export default function DownloadPage() {
             </div>
           </div>
 
+          {/* App size */}
+          <p
+            className="font-heading text-white mb-6"
+            style={{ fontWeight: 700, fontSize: "clamp(20px, 3vw, 30px)", letterSpacing: "-0.03em" }}
+          >
+            {fileSize}
+          </p>
+
           {/* Download Button */}
           <div className="relative w-full max-w-lg mb-6">
             {/* Loading bar on top border */}

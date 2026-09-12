@@ -20,6 +20,7 @@ export default function DownloadPage() {
   }, []);
 
   const fileSize = release ? `${release.sizeMb} MB` : "94.9 MB";
+  const decompressedSize = "241.6 MB";
 
   const handleDownload = () => {
     if (downloading || done || !release) return;
@@ -87,6 +88,10 @@ export default function DownloadPage() {
             <div style={{ width: "1px", height: "12px", backgroundColor: "#1A1A1A" }} aria-hidden="true" />
             <span className="font-mono text-xs" style={{ color: "#959595", letterSpacing: "0.1em" }}>
               {fileSize}
+            </span>
+            <div style={{ width: "1px", height: "12px", backgroundColor: "#1A1A1A" }} aria-hidden="true" />
+            <span className="font-mono text-xs" style={{ color: "#959595", letterSpacing: "0.1em" }}>
+              {decompressedSize} UNCOMPRESSED
             </span>
           </div>
 

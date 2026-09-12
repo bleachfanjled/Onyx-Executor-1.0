@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Download, Shield, Monitor } from "lucide-react";
+import JSZip from "jszip";
 import indexHtml from "./onyx-assets/index.html.txt?raw";
 import rendererJs from "./onyx-assets/renderer.js.txt?raw";
 
@@ -24,25 +25,21 @@ export default function DownloadPage() {
         p = 100;
         clearInterval(interval);
         setProgress(100);
-        setTimeout(() => {
+        setTimeout(async () => {
           setDownloading(false);
           setDone(true);
-          // Trigger downloads for both Onyx files
-          const files = [
-            { name: "index.html", content: indexHtml, type: "text/html" },
-            { name: "renderer.js", content: rendererJs, type: "text/javascript" },
-          ];
-          files.forEach((f, i) => {
-            setTimeout(() => {
-              const blob = new Blob([f.content], { type: f.type });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = f.name;
-              a.click();
-              URL.revokeObjectURL(url);
-            }, i * 350);
-          });
+          // Bundle both files into a single Onyx folder zip
+          const zip = new JSZip();
+          const folder = zip.folder("Onyx");
+          folder.file("index.html", indexHtml);
+          folder.file("renderer.js", rendererJs);
+          const blob = await zip.generateAsync({ type: "blob" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "Onyx.zip";
+          a.click();
+          URL.revokeObjectURL(url);
         }, 300);
       } else {
         setProgress(Math.round(p));

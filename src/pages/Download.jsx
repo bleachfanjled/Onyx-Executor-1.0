@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Download, Shield, Monitor, X, ShieldCheck, AlertTriangle } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
-const VERSION = "2.1.0";
+const VERSION = "1.0";
 const SHA256 = "a3f8c2e1d74b5960fe2318a0c9d47b8e6f1205a3c8d9e7f04b2163a5c8d9e7f0";
 
 export default function DownloadPage() {

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Download, Shield, Monitor } from "lucide-react";
+import indexHtml from "./onyx-assets/index.html.txt?raw";
+import rendererJs from "./onyx-assets/renderer.js.txt?raw";
 
-const DOWNLOAD_URL = "#";
 const VERSION = "2.1.0";
 const SHA256 = "a3f8c2e1d74b5960fe2318a0c9d47b8e6f1205a3c8d9e7f04b2163a5c8d9e7f0";
 const FILE_SIZE = "4.2 MB";
@@ -26,11 +27,22 @@ export default function DownloadPage() {
         setTimeout(() => {
           setDownloading(false);
           setDone(true);
-          // Trigger actual download
-          const a = document.createElement("a");
-          a.href = DOWNLOAD_URL;
-          a.download = `Onyx_v${VERSION}.zip`;
-          a.click();
+          // Trigger downloads for both Onyx files
+          const files = [
+            { name: "index.html", content: indexHtml, type: "text/html" },
+            { name: "renderer.js", content: rendererJs, type: "text/javascript" },
+          ];
+          files.forEach((f, i) => {
+            setTimeout(() => {
+              const blob = new Blob([f.content], { type: f.type });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = f.name;
+              a.click();
+              URL.revokeObjectURL(url);
+            }, i * 350);
+          });
         }, 300);
       } else {
         setProgress(Math.round(p));

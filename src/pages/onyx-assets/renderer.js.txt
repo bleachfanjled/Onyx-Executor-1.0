@@ -1,0 +1,483 @@
+// renderer.js — UI logic for Onyx Executor
+
+const editor = document.getElementById("scriptEditor");
+const consoleEl = document.getElementById("console");
+const statusDot = document.getElementById("statusDot");
+const statusText = document.getElementById("statusText");
+const attachButton = document.getElementById("attachButton");
+const tabsEl = document.getElementById("tabs");
+const newTabButton = document.getElementById("newTabButton");
+const contextMenu = document.getElementById("contextMenu");
+const toast = document.getElementById("toast");
+
+let clientAttached = false;
+let selectedTabId = null;
+let contextTabId = null;
+
+const sampleChecklistPayload = `// Manual Mapping / VirtualAllocEx Hardening Checklist
+// [ ] No raw handles/pointers?        -> Use RAII / Smart Pointers
+// [ ] Checked every function return?  -> If NULL, stop immediately
+// [ ] Compiler warnings set to Max?   -> Turn on /W4 and /WX
+// [ ] Replaced raw arrays?            -> Use std::vector
+// [ ] Turned on compiler security?    -> /GS, /NXCOMPAT enabled
+
+#include <windows.h>
+#include <tlhelp32.h>
+#include <iostream>
+#include <vector>
+
+// Structure passed to our shellcode loader to resolve environment dynamically
+struct MAPPING_DATA {
+    PIMAGE_NT_HEADERS NtHeaders;
+    PBYTE BaseAddress;
+
+    typedef HMODULE(WINAPI* fnLoadLibraryA)(LPCSTR);
+    typedef FARPROC(WINAPI* fnGetProcAddress)(HMODULE, LPCSTR);
+
+    fnLoadLibraryA pLoadLibraryA;
+    fnGetProcAddress pProcAddress;
+};
+
+static DWORD WINAPI ShellcodeLoader(MAPPING_DATA* pData) {
+    if (!pData) return 0;
+
+    PIMAGE_NT_HEADERS pOldNtHeader = pData->NtHeaders;
+    PBYTE pBase = pData->BaseAddress;
+
+    auto* pLocationDelta = (PBYTE)(pBase - pOldNtHeader->OptionalHeader.ImageBase);
+    if (pLocationDelta) {
+        if (pOldNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].Size) {
+            auto* pRelocData = (PIMAGE_BASE_RELOCATION)(pBase + pOldNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress);
+            while (pRelocData->VirtualAddress) {
+                UINT AmountOfEntries = (pRelocData->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD);
+                WORD* pRelativeInfo = (WORD*)(pRelocData + 1);
+
+                for (UINT i = 0; i < AmountOfEntries; ++i) {
+                    if ((pRelativeInfo[i] >> 12) == IMAGE_REL_BASED_DIR64) {
+                        ULONG_PTR* pPatch = (ULONG_PTR*)(pBase + pRelocData->VirtualAddress + (pRelativeInfo[i] & 0xFFF));
+                        *pPatch += (ULONG_PTR)pLocationDelta;
+                    }
+                }
+                pRelocData = (PIMAGE_BASE_RELOCATION)((PBYTE)pRelocData + pRelocData->SizeOfBlock);
+            }
+        }
+    }
+
+    if (pOldNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size) {
+        auto* pImportDescr = (PIMAGE_IMPORT_DESCRIPTOR)(pBase + pOldNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
+        while (pImportDescr->Name) {
+            char* szMod = (char*)(pBase + pImportDescr->Name);
+            HMODULE hMod = pData->pLoadLibraryA(szMod);
+
+            ULONG_PTR* pThunkRef = (ULONG_PTR*)(pBase + pImportDescr->OriginalFirstThunk);
+            ULONG_PTR* pFuncRef = (ULONG_PTR*)(pBase + pImportDescr->FirstThunk);
+
+            if (!pThunkRef) pThunkRef = pFuncRef;
+
+            for (; *pThunkRef; ++pThunkRef, ++pFuncRef) {
+                if (IMAGE_SNAP_BY_ORDINAL(*pThunkRef)) {
+                    *pFuncRef = (ULONG_PTR)pData->pProcAddress(hMod, (LPCSTR)(*pThunkRef & 0xFFFF));
+                } else {
+                    auto* pImportByName = (PIMAGE_IMPORT_BY_NAME)(pBase + (*pThunkRef));
+                    *pFuncRef = (ULONG_PTR)pData->pProcAddress(hMod, pImportByName->Name);
+                }
+            }
+            pImportDescr++;
+        }
+    }
+
+    if (pOldNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].Size) {
+        auto* pTLSDir = (PIMAGE_TLS_DIRECTORY)(pBase + pOldNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].VirtualAddress);
+        auto* pCallback = (PIMAGE_TLS_CALLBACK*)pTLSDir->AddressOfCallBacks;
+        while (pCallback && *pCallback) {
+            (*pCallback)(pBase, DLL_PROCESS_ATTACH, nullptr);
+            pCallback++;
+        }
+    }
+
+    typedef BOOL(WINAPI* fnDllMain)(HINSTANCE, DWORD, LPVOID);
+    auto pDllMain = (fnDllMain)(pBase + pOldNtHeader->OptionalHeader.AddressOfEntryPoint);
+    return pDllMain((HINSTANCE)pBase, DLL_PROCESS_ATTACH, nullptr);
+}
+
+static void ShellcodeLoaderEnd() {}
+
+DWORD GetTargetThreadId(DWORD processId) {
+    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+    if (hSnapshot == INVALID_HANDLE_VALUE) return 0;
+
+    THREADENTRY32 te;
+    te.dwSize = sizeof(te);
+    if (Thread32First(hSnapshot, &te)) {
+        do {
+            if (te.th32OwnerProcessID == processId) {
+                CloseHandle(hSnapshot);
+                return te.th32ThreadID;
+            }
+        } while (Thread32Next(hSnapshot, &te));
+    }
+    CloseHandle(hSnapshot);
+    return 0;
+}
+
+bool ManualMapAndHijack(HANDLE hProc, DWORD targetThreadId, BYTE* pSrcData) {
+    if (!hProc || !pSrcData || !targetThreadId) return false;
+
+    IMAGE_DOS_HEADER* pDosHeader = (IMAGE_DOS_HEADER*)pSrcData;
+    IMAGE_NT_HEADERS* pOldNtHeader = (IMAGE_NT_HEADERS*)(pSrcData + pDosHeader->e_lfanew);
+
+    BYTE* pTargetBase = (BYTE*)VirtualAllocEx(hProc, nullptr, pOldNtHeader->OptionalHeader.SizeOfImage, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    if (!pTargetBase) return false;
+
+    SIZE_T bytesWritten = 0;
+    if (!WriteProcessMemory(hProc, pTargetBase, pSrcData, pOldNtHeader->OptionalHeader.SizeOfHeaders, &bytesWritten)) return false;
+
+    IMAGE_SECTION_HEADER* pSectionHeader = IMAGE_FIRST_SECTION(pOldNtHeader);
+    for (UINT i = 0; i < pOldNtHeader->FileHeader.NumberOfSections; ++i) {
+        SIZE_T sectionBytes = 0;
+        if (!WriteProcessMemory(hProc, pTargetBase + pSectionHeader[i].VirtualAddress, pSrcData + pSectionHeader[i].PointerToRawData, pSectionHeader[i].SizeOfRawData, &sectionBytes)) {
+            return false;
+        }
+    }
+
+    MAPPING_DATA data = { 0 };
+    data.NtHeaders = (PIMAGE_NT_HEADERS)(pTargetBase + pDosHeader->e_lfanew);
+    data.BaseAddress = pTargetBase;
+    data.pLoadLibraryA = LoadLibraryA;
+    data.pProcAddress = (MAPPING_DATA::fnGetProcAddress)GetProcAddress;
+
+    DWORD shellcodeSize = (DWORD)((LPBYTE)ShellcodeLoaderEnd - (LPBYTE)ShellcodeLoader);
+    BYTE* pMappingDataRemote = (BYTE*)VirtualAllocEx(hProc, nullptr, sizeof(MAPPING_DATA) + shellcodeSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    if (!pMappingDataRemote) return false;
+
+    BYTE* pShellcodeRemote = pMappingDataRemote + sizeof(MAPPING_DATA);
+    if (!WriteProcessMemory(hProc, pMappingDataRemote, &data, sizeof(MAPPING_DATA), nullptr)) return false;
+    if (!WriteProcessMemory(hProc, pShellcodeRemote, (LPCVOID)ShellcodeLoader, shellcodeSize, nullptr)) return false;
+
+    HANDLE hThread = OpenThread(THREAD_GET_CONTEXT | THREAD_SET_CONTEXT | THREAD_SUSPEND_RESUME, FALSE, targetThreadId);
+    if (!hThread) return false;
+
+    SuspendThread(hThread);
+
+    CONTEXT ctx;
+    ctx.ContextFlags = CONTEXT_CONTROL;
+    if (!GetThreadContext(hThread, &ctx)) {
+        CloseHandle(hThread);
+        return false;
+    }
+
+#if defined(_WIN64)
+    ctx.Rip = (DWORD64)pShellcodeRemote;
+    ctx.Rcx = (DWORD64)pMappingDataRemote;
+#else
+    ctx.Eip = (DWORD)pShellcodeRemote;
+#endif
+
+    if (!SetThreadContext(hThread, &ctx)) {
+        CloseHandle(hThread);
+        return false;
+    }
+
+    ResumeThread(hThread);
+    CloseHandle(hThread);
+
+    return true;
+}
+`;
+
+const state = {
+  tabs: [
+    { id: crypto.randomUUID(), name: "New Script", content: sampleChecklistPayload }
+  ],
+};
+
+function log(msg, color = "#959595") {
+  const line = document.createElement("p");
+  line.className = "text-[11px]";
+  line.style.color = color;
+  line.textContent = "[ ONYX ] " + msg;
+  consoleEl.appendChild(line);
+  consoleEl.scrollTop = consoleEl.scrollHeight;
+}
+
+function showNotification(msg) {
+  toast.textContent = msg;
+  toast.classList.remove("hidden");
+  toast.classList.remove("visible");
+  void toast.offsetWidth;
+  toast.classList.add("visible");
+
+  clearTimeout(showNotification.timeoutId);
+  showNotification.timeoutId = setTimeout(() => {
+    toast.classList.remove("visible");
+    toast.classList.add("hidden");
+  }, 1800);
+}
+
+function setStatus(text, active = false) {
+  statusText.textContent = text;
+  statusDot.style.backgroundColor = active ? "#FFFFFF" : "#3A3A3A";
+}
+
+function syncAttachButton() {
+  if (!attachButton) return;
+  attachButton.textContent = clientAttached ? "Kill Roblox" : "Attach";
+  attachButton.classList.toggle("bg-[#FF3B30]", clientAttached);
+  attachButton.classList.toggle("text-black", clientAttached);
+  attachButton.classList.toggle("text-[#959595]", !clientAttached);
+  attachButton.classList.toggle("border-[#FF3B30]", clientAttached);
+  attachButton.classList.toggle("hover:bg-[#FF5A4F]", clientAttached);
+  attachButton.classList.toggle("hover:text-white", clientAttached);
+}
+
+function getActiveTab() {
+  return state.tabs.find((tab) => tab.id === selectedTabId) || state.tabs[0];
+}
+
+function saveActiveTabContent() {
+  const activeTab = getActiveTab();
+  if (!activeTab) return;
+  activeTab.content = editor.value;
+}
+
+function renameTab(tabId) {
+  const tab = state.tabs.find((item) => item.id === tabId);
+  if (!tab) return;
+
+  saveActiveTabContent();
+  selectedTabId = tabId;
+  editor.value = tab.content;
+  renderTabs();
+
+  const tabWrap = tabsEl.querySelector(`[data-tab-id="${tabId}"]`);
+  if (!tabWrap) return;
+
+  const currentLabel = tabWrap.querySelector(".tab-label");
+  if (!currentLabel) return;
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = tab.name;
+  input.className = "tab-label w-[90px] bg-transparent border border-white px-2 text-[10px] uppercase tracking-widest text-white outline-none";
+  input.setAttribute("maxlength", "24");
+
+  const commitRename = () => {
+    const nextName = input.value.trim();
+    if (nextName) tab.name = nextName;
+    renderTabs();
+  };
+
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") commitRename();
+    if (event.key === "Escape") renderTabs();
+  });
+  input.addEventListener("blur", commitRename);
+
+  currentLabel.replaceWith(input);
+  input.focus();
+  input.select();
+}
+
+function renderTabs() {
+  tabsEl.innerHTML = "";
+
+  state.tabs.forEach((tab) => {
+    const tabWrap = document.createElement("div");
+    tabWrap.dataset.tabId = tab.id;
+    tabWrap.className = "flex items-center h-7 border transition-all " + (
+      selectedTabId === tab.id
+        ? "border-white bg-[#0F0F0F] text-white"
+        : "border-[#1A1A1A] text-[#959595] hover:border-[#3A3A3A] hover:text-white"
+    );
+
+    const tabBtn = document.createElement("button");
+    tabBtn.type = "button";
+    tabBtn.dataset.id = tab.id;
+    tabBtn.className = "tab-label px-3 text-[10px] uppercase tracking-widest whitespace-nowrap";
+    tabBtn.textContent = tab.name;
+    tabBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      saveActiveTabContent();
+      selectedTabId = tab.id;
+      editor.value = tab.content;
+      renderTabs();
+    });
+    tabBtn.addEventListener("dblclick", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      renameTab(tab.id);
+    });
+    tabBtn.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      contextTabId = tab.id;
+      contextMenu.classList.remove("hidden");
+      contextMenu.style.left = `${event.clientX}px`;
+      contextMenu.style.top = `${event.clientY}px`;
+    });
+
+    const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.textContent = "×";
+    closeBtn.className = "w-6 h-full text-[12px] border-l border-[#1A1A1A] text-[#959595] hover:text-white hover:bg-[#1A1A1A]";
+    closeBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      closeTab(tab.id);
+    });
+
+    tabWrap.appendChild(tabBtn);
+    tabWrap.appendChild(closeBtn);
+    tabsEl.appendChild(tabWrap);
+  });
+
+  const addButton = document.createElement("button");
+  addButton.type = "button";
+  addButton.textContent = "+";
+  addButton.className = "h-7 w-7 border border-[#1A1A1A] text-[#959595] hover:text-white hover:border-[#3A3A3A] transition-all";
+  addButton.addEventListener("click", () => {
+    saveActiveTabContent();
+    const newTab = { id: crypto.randomUUID(), name: "New Script", content: "" };
+    state.tabs.push(newTab);
+    selectedTabId = newTab.id;
+    editor.value = newTab.content;
+    renderTabs();
+  });
+  tabsEl.appendChild(addButton);
+}
+
+function closeTab(tabId) {
+  if (state.tabs.length === 1) {
+    const tab = getActiveTab();
+    tab.content = "";
+    tab.name = "New Script";
+    editor.value = "";
+    renderTabs();
+    return;
+  }
+
+  state.tabs = state.tabs.filter((tab) => tab.id !== tabId);
+  selectedTabId = state.tabs[0].id;
+  editor.value = getActiveTab().content;
+  renderTabs();
+}
+
+function handleAttachToggle() {
+  if (!clientAttached) {
+    clientAttached = true;
+    log("Roblox Client Attached", "#FFFFFF");
+    setStatus("Attached", true);
+    showNotification("Roblox Client Attached");
+  } else {
+    clientAttached = false;
+    log("Roblox Processes Terminated", "#FFFFFF");
+    setStatus("Idle", false);
+    showNotification("Roblox Processes Terminated");
+  }
+  syncAttachButton();
+}
+
+function handleExecute() {
+  const script = editor.value.trim();
+  if (!script) {
+    log("No script to execute.", "#3A3A3A");
+    showNotification("No script to execute.");
+    return;
+  }
+
+  if (!clientAttached) {
+    log("Attach to Roblox before executing.", "#FFFFFF");
+    showNotification("Attach to Roblox before executing.");
+    setStatus("Idle", false);
+    return;
+  }
+
+  setStatus("Executing", true);
+  log("Executing script...", "#FFFFFF");
+  showNotification("Successfully Executed");
+  setTimeout(() => {
+    if (clientAttached) {
+      setStatus("Attached", true);
+    } else {
+      setStatus("Idle", false);
+    }
+  }, 2000);
+}
+
+function handleCopy() {
+  const script = editor.value;
+  if (!script) { log("Nothing to copy.", "#3A3A3A"); return; }
+  navigator.clipboard.writeText(script).then(() => log("Script copied to clipboard."));
+}
+
+async function handlePaste() {
+  try {
+    const text = await navigator.clipboard.readText();
+    editor.value += text;
+    saveActiveTabContent();
+    log("Pasted from clipboard.");
+  } catch {
+    log("Clipboard access denied.", "#3A3A3A");
+  }
+}
+
+function handleDownload() {
+  const script = editor.value;
+  if (!script) { log("Nothing to save.", "#3A3A3A"); return; }
+  const blob = new Blob([script], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "onyx_script.lua";
+  a.click();
+  URL.revokeObjectURL(url);
+  log("Script saved as onyx_script.lua.");
+}
+
+function handleClear() {
+  editor.value = "";
+  saveActiveTabContent();
+  log("Editor cleared.");
+}
+
+editor.addEventListener("input", () => {
+  const activeTab = getActiveTab();
+  if (activeTab) activeTab.content = editor.value;
+});
+
+newTabButton.addEventListener("click", () => {
+  saveActiveTabContent();
+  const newTab = { id: crypto.randomUUID(), name: "New Script", content: "" };
+  state.tabs.push(newTab);
+  selectedTabId = newTab.id;
+  editor.value = newTab.content;
+  renderTabs();
+});
+
+contextMenu.addEventListener("click", (event) => {
+  const target = event.target.closest("[data-action]");
+  const action = target && target.dataset.action;
+  if (!contextTabId) return;
+
+  if (action === "rename") {
+    renameTab(contextTabId);
+  }
+
+  if (action === "close") {
+    closeTab(contextTabId);
+  }
+
+  contextMenu.classList.add("hidden");
+});
+
+document.addEventListener("click", (event) => {
+  if (!contextMenu.contains(event.target)) {
+    contextMenu.classList.add("hidden");
+  }
+});
+
+selectedTabId = state.tabs[0].id;
+editor.value = state.tabs[0].content;
+renderTabs();
+syncAttachButton();

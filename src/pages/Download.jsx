@@ -23,7 +23,7 @@ export default function DownloadPage() {
   const decompressedSize = "241.6 MB";
 
   const handleDownload = () => {
-    if (downloading || done || !release) return;
+    if (downloading || done || !release || !confirmed) return;
     setDownloading(true);
     setProgress(0);
 
@@ -48,6 +48,7 @@ export default function DownloadPage() {
 
   const [copied, setCopied] = useState(false);
   const [showSafetyModal, setShowSafetyModal] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
   const copyHash = () => {
     navigator.clipboard.writeText(SHA256).then(() => {
       setCopied(true);
@@ -123,6 +124,137 @@ export default function DownloadPage() {
             </div>
           </div>
 
+          {/* Before You Download — safety explainer */}
+          <div
+            className="w-full max-w-2xl mb-16 text-left"
+            style={{ border: "1px solid #1A1A1A", backgroundColor: "#0D0D0D" }}
+          >
+            {/* Section header */}
+            <div
+              className="flex items-center gap-3 px-8 py-5"
+              style={{ borderBottom: "1px solid #1A1A1A" }}
+            >
+              <ShieldCheck size={16} style={{ color: "#FFFFFF" }} />
+              <span className="font-mono text-xs" style={{ color: "#FFFFFF", letterSpacing: "0.14em" }}>
+                BEFORE YOU DOWNLOAD
+              </span>
+            </div>
+
+            <div className="px-8 py-7">
+              {/* What is SHA-256 */}
+              <h3
+                className="font-heading text-white mb-3"
+                style={{ fontWeight: 700, fontSize: "15px", letterSpacing: "-0.02em" }}
+              >
+                What is SHA-256?
+              </h3>
+              <p
+                className="font-body mb-8"
+                style={{ color: "#959595", fontSize: "13.5px", lineHeight: 1.7 }}
+              >
+                SHA-256 is a unique fingerprint of this exact file. If even one byte is
+                changed — by malware, a re-upload, or a modified copy — the fingerprint
+                changes completely. Matching the hash below against the file you downloaded
+                proves it is the genuine, unmodified Onyx build.
+              </p>
+
+              {/* Steps */}
+              <h3
+                className="font-heading text-white mb-4"
+                style={{ fontWeight: 700, fontSize: "15px", letterSpacing: "-0.02em" }}
+              >
+                How to verify your download
+              </h3>
+              <ol className="space-y-4 mb-8">
+                {[
+                  {
+                    title: "Download only from the official domain",
+                    body: "When announced, it will be shown in the popup after download. Never use mirrors, Discord attachments, or reuploads.",
+                  },
+                  {
+                    title: "Copy the SHA-256 hash from this page",
+                    body: "Use the Copy button next to the hash below before you run anything.",
+                  },
+                  {
+                    title: "Check the hash of your downloaded file",
+                    body: "Windows: open PowerShell and run  Get-FileHash .\\Onyx.exe -Algorithm SHA256  — compare the result to the hash on this page.",
+                  },
+                  {
+                    title: "Only run it if they match exactly",
+                    body: "If the hashes differ, delete the file immediately and re-download from the official source.",
+                  },
+                ].map((step, i) => (
+                  <li key={i} className="flex gap-4">
+                    <span
+                      className="flex-shrink-0 font-mono text-xs flex items-center justify-center"
+                      style={{
+                        width: "24px",
+                        height: "24px",
+                        border: "1px solid #1A1A1A",
+                        backgroundColor: "#050505",
+                        color: "#959595",
+                        letterSpacing: "0.04em",
+                      }}
+                    >
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <div>
+                      <p
+                        className="font-heading text-white mb-1"
+                        style={{ fontWeight: 600, fontSize: "13px", letterSpacing: "-0.01em" }}
+                      >
+                        {step.title}
+                      </p>
+                      <p
+                        className="font-mono"
+                        style={{ color: "#959595", fontSize: "12px", lineHeight: 1.6, letterSpacing: "0.01em" }}
+                      >
+                        {step.body}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+
+              {/* Confirm checkbox */}
+              <label
+                className="flex items-start gap-3 cursor-pointer group"
+                style={{ borderTop: "1px solid #1A1A1A", paddingTop: "20px" }}
+              >
+                <span
+                  className="flex-shrink-0 flex items-center justify-center transition-sharp"
+                  style={{
+                    width: "20px",
+                    height: "20px",
+                    border: confirmed ? "1px solid #FFFFFF" : "1px solid #3A3A3A",
+                    backgroundColor: confirmed ? "#FFFFFF" : "transparent",
+                    marginTop: "1px",
+                  }}
+                  onClick={() => setConfirmed((c) => !c)}
+                >
+                  {confirmed && (
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                      <path d="M2 6.5L4.5 9L10 3" stroke="#050505" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </span>
+                <input
+                  type="checkbox"
+                  checked={confirmed}
+                  onChange={(e) => setConfirmed(e.target.checked)}
+                  className="sr-only"
+                  aria-label="Confirm I have read and understand how to verify my download"
+                />
+                <span
+                  className="font-body"
+                  style={{ color: confirmed ? "#FFFFFF" : "#959595", fontSize: "13px", lineHeight: 1.6 }}
+                >
+                  I have read and understand how to verify my download is safe before running it.
+                </span>
+              </label>
+            </div>
+          </div>
+
           {/* Download Button */}
           <div className="relative w-full max-w-lg mb-6">
             {/* Loading bar on top border */}
@@ -138,13 +270,13 @@ export default function DownloadPage() {
             )}
             <button
               onClick={handleDownload}
-              disabled={downloading || (!release && !releaseError)}
+              disabled={downloading || (!release && !releaseError) || (!confirmed && !done)}
               aria-label={`Download Onyx Version ${VERSION} for Windows`}
               className="w-full flex items-center justify-center gap-4 font-heading uppercase transition-sharp focus:outline-white disabled:cursor-not-allowed"
               style={{
-                backgroundColor: done ? "#0D0D0D" : "#FFFFFF",
-                color: done ? "#FFFFFF" : "#050505",
-                border: done ? "1px solid #1A1A1A" : "1px solid #FFFFFF",
+                backgroundColor: done ? "#0D0D0D" : confirmed ? "#FFFFFF" : "#0D0D0D",
+                color: done ? "#FFFFFF" : confirmed ? "#050505" : "#3A3A3A",
+                border: done ? "1px solid #1A1A1A" : confirmed ? "1px solid #FFFFFF" : "1px solid #1A1A1A",
                 padding: "24px 48px",
                 fontWeight: 800,
                 fontSize: "16px",
@@ -152,10 +284,10 @@ export default function DownloadPage() {
                 minHeight: "72px",
               }}
               onMouseEnter={(e) => {
-                if (!downloading && !done) e.currentTarget.style.backgroundColor = "#E0E0E0";
+                if (!downloading && !done && confirmed) e.currentTarget.style.backgroundColor = "#E0E0E0";
               }}
               onMouseLeave={(e) => {
-                if (!downloading && !done) e.currentTarget.style.backgroundColor = "#FFFFFF";
+                if (!downloading && !done && confirmed) e.currentTarget.style.backgroundColor = "#FFFFFF";
               }}
             >
               <Download size={18} aria-hidden="true" />
@@ -165,7 +297,9 @@ export default function DownloadPage() {
                 ? `PREPARING — ${progress}%`
                 : releaseError
                 ? "UNAVAILABLE"
-                : "DOWNLOAD ONYX FREE"}
+                : confirmed
+                ? "DOWNLOAD ONYX FREE"
+                : "CONFIRM ABOVE TO DOWNLOAD"}
             </button>
           </div>
 

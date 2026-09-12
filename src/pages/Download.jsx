@@ -1,28 +1,28 @@
 import { useState, useEffect } from "react";
 import { Download, Shield, Monitor } from "lucide-react";
-import JSZip from "jszip";
-import indexHtmlUrl from "./onyx-assets/index.html.txt?raw";
-import rendererJsUrl from "./onyx-assets/renderer.js.txt?raw";
+import { base44 } from "@/api/base44Client";
 
 const VERSION = "2.1.0";
 const SHA256 = "a3f8c2e1d74b5960fe2318a0c9d47b8e6f1205a3c8d9e7f04b2163a5c8d9e7f0";
-const FILE_SIZE = "1.5 MB";
 
 export default function DownloadPage() {
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
-  const [assets, setAssets] = useState({ html: "", js: "" });
+  const [release, setRelease] = useState(null);
+  const [releaseError, setReleaseError] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      fetch(indexHtmlUrl).then((r) => r.text()),
-      fetch(rendererJsUrl).then((r) => r.text()),
-    ]).then(([html, js]) => setAssets({ html, js }));
+    base44.functions
+      .invoke("getOnyxRelease", {})
+      .then((res) => setRelease(res.data))
+      .catch(() => setReleaseError(true));
   }, []);
 
+  const fileSize = release ? `${release.sizeMb} MB` : "94.9 MB";
+
   const handleDownload = () => {
-    if (downloading || done) return;
+    if (downloading || done || !release) return;
     setDownloading(true);
     setProgress(0);
 
@@ -33,21 +33,10 @@ export default function DownloadPage() {
         p = 100;
         clearInterval(interval);
         setProgress(100);
-        setTimeout(async () => {
+        setTimeout(() => {
           setDownloading(false);
           setDone(true);
-          // Bundle both files into a single Onyx folder zip
-          const zip = new JSZip();
-          const folder = zip.folder("Onyx");
-          folder.file("index.html", assets.html);
-          folder.file("renderer.js", assets.js);
-          const blob = await zip.generateAsync({ type: "blob" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = "Onyx.zip";
-          a.click();
-          URL.revokeObjectURL(url);
+          window.location.href = release.downloadUrl;
         }, 300);
       } else {
         setProgress(Math.round(p));
@@ -97,7 +86,7 @@ export default function DownloadPage() {
             </span>
             <div style={{ width: "1px", height: "12px", backgroundColor: "#1A1A1A" }} aria-hidden="true" />
             <span className="font-mono text-xs" style={{ color: "#959595", letterSpacing: "0.1em" }}>
-              {FILE_SIZE}
+              {fileSize}
             </span>
           </div>
 
@@ -146,7 +135,7 @@ export default function DownloadPage() {
             )}
             <button
               onClick={handleDownload}
-              disabled={downloading}
+              disabled={downloading || (!release && !releaseError)}
               aria-label={`Download Onyx Version ${VERSION} for Windows`}
               className="w-full flex items-center justify-center gap-4 font-heading uppercase transition-sharp focus:outline-white disabled:cursor-not-allowed"
               style={{
@@ -168,9 +157,11 @@ export default function DownloadPage() {
             >
               <Download size={18} aria-hidden="true" />
               {done
-                ? "DOWNLOAD COMPLETE"
+                ? "DOWNLOAD STARTED"
                 : downloading
-                ? `DOWNLOADING — ${progress}%`
+                ? `PREPARING — ${progress}%`
+                : releaseError
+                ? "UNAVAILABLE"
                 : "DOWNLOAD ONYX FREE"}
             </button>
           </div>
@@ -217,7 +208,7 @@ export default function DownloadPage() {
             className="mt-8 font-mono text-xs"
             style={{ color: "#3A3A3A", letterSpacing: "0.06em", maxWidth: "480px" }}
           >
-            Never disable antivirus when donwloading exe files. Onyx doesn't need you to disable antivirus.
+            Never disable antivirus when downloading exe files. Onyx doesn't need you to disable antivirus.
           </p>
         </div>
       </div>

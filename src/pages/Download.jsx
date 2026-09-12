@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Download, Shield, Monitor } from "lucide-react";
 import JSZip from "jszip";
-import indexHtml from "./onyx-assets/index.html.txt?raw";
-import rendererJs from "./onyx-assets/renderer.js.txt?raw";
+import indexHtmlUrl from "./onyx-assets/index.html.txt?raw";
+import rendererJsUrl from "./onyx-assets/renderer.js.txt?raw";
 
 const VERSION = "2.1.0";
 const SHA256 = "a3f8c2e1d74b5960fe2318a0c9d47b8e6f1205a3c8d9e7f04b2163a5c8d9e7f0";
@@ -12,6 +12,14 @@ export default function DownloadPage() {
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
+  const [assets, setAssets] = useState({ html: "", js: "" });
+
+  useEffect(() => {
+    Promise.all([
+      fetch(indexHtmlUrl).then((r) => r.text()),
+      fetch(rendererJsUrl).then((r) => r.text()),
+    ]).then(([html, js]) => setAssets({ html, js }));
+  }, []);
 
   const handleDownload = () => {
     if (downloading || done) return;
@@ -31,8 +39,8 @@ export default function DownloadPage() {
           // Bundle both files into a single Onyx folder zip
           const zip = new JSZip();
           const folder = zip.folder("Onyx");
-          folder.file("index.html", indexHtml);
-          folder.file("renderer.js", rendererJs);
+          folder.file("index.html", assets.html);
+          folder.file("renderer.js", assets.js);
           const blob = await zip.generateAsync({ type: "blob" });
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");

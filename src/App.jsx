@@ -10,6 +10,7 @@ import Home from './pages/Home';
 import Download from './pages/Download';
 import Changelog from './pages/Changelog';
 import Requirements from './pages/Requirements';
+import ExecutorPreview from './pages/ExecutorPreview';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
               <Route path="/download" element={<Download />} />
               <Route path="/changelog" element={<Changelog />} />
               <Route path="/requirements" element={<Requirements />} />
+              <Route path="/preview" element={<ExecutorPreview />} />
             </Route>
             <Route path="*" element={<PageNotFound />} />
           </Routes>

@@ -33,7 +33,7 @@
   <div class="w-screen h-screen bg-[#050505] border border-[#1A1A1A] flex flex-col font-mono text-white select-none">
 
     <div class="drag h-10 border-b border-[#1A1A1A] flex items-center px-4 justify-between shrink-0">
-      <span class="text-[10px] tracking-[0.2em] text-[#959595]">ONYX // V2.1</span>
+      <span class="text-[10px] tracking-[0.2em] text-[#959595]">ONYX // V1.0</span>
       <div class="flex gap-3 no-drag">
         <button onclick="window.electronAPI.minimize()" class="w-3 h-3 rounded-full bg-[#1A1A1A] hover:bg-[#3A3A3A] transition-all"></button>
         <button onclick="window.electronAPI.close()" class="w-3 h-3 rounded-full bg-[#1A1A1A] hover:bg-white transition-all"></button>

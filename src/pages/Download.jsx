@@ -271,7 +271,7 @@ export default function DownloadPage() {
               onClick={handleDownload}
               disabled={downloading || (!release && !releaseError) || (!confirmed && !done)}
               aria-label={`Download Onyx Version ${VERSION} for Windows`}
-              className="w-full flex items-center justify-center gap-4 font-heading uppercase transition-sharp focus:outline-white disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-4 font-heading uppercase focus:outline-white disabled:cursor-not-allowed"
               style={{
                 backgroundColor: done ? "#0D0D0D" : confirmed ? "#FFFFFF" : "#0D0D0D",
                 color: done ? "#FFFFFF" : confirmed ? "#050505" : "#3A3A3A",

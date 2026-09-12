@@ -1,0 +1,128 @@
+// integrity_check.cpp — Onyx self-integrity verification
+//
+// On startup, Onyx hashes its own running .exe with SHA-256 and compares
+// the result against the expected hash below. If they do not match, the
+// build is corrupted or modified, so Onyx refuses to start and points the
+// user to reinstall from the official source.
+//
+// Build: link with bcrypt.lib
+
+#include <windows.h>
+#include <shellapi.h>
+#include <bcrypt.h>
+#include <iostream>
+#include <string>
+#include <vector>
+
+#pragma comment(lib, "bcrypt.lib")
+
+// This must match the SHA-256 published on the Onyx download page.
+static const std::string EXPECTED_HASH =
+    "a3f8c2e1d74b5960fe2318a0c9d47b8e6f1205a3c8d9e7f04b2163a5c8d9e7f0";
+
+// Convert a byte buffer to a lowercase hex string.
+static std::string ToHex(const unsigned char* data, size_t len) {
+    static const char hex[] = "0123456789abcdef";
+    std::string out;
+    out.reserve(len * 2);
+    for (size_t i = 0; i < len; ++i) {
+        out.push_back(hex[(data[i] >> 4) & 0x0F]);
+        out.push_back(hex[data[i] & 0x0F]);
+    }
+    return out;
+}
+
+// SHA-256 of the file at `path`, returned as a lowercase hex string.
+static std::string Sha256OfFile(const std::wstring& path) {
+    BCRYPT_ALG_HANDLE hAlg = nullptr;
+    if (BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_SHA256_ALGORITHM, nullptr, 0) != 0)
+        return {};
+
+    BCRYPT_HASH_HANDLE hHash = nullptr;
+    if (BCryptCreateHash(hAlg, &hHash, nullptr, 0, nullptr, 0, 0) != 0) {
+        BCryptCloseAlgorithmProvider(hAlg, 0);
+        return {};
+    }
+
+    HANDLE hFile = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ,
+                               nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        BCryptDestroyHash(hHash);
+        BCryptCloseAlgorithmProvider(hAlg, 0);
+        return {};
+    }
+
+    constexpr DWORD CHUNK = 1 << 20; // 1 MB
+    std::vector<BYTE> buffer(CHUNK);
+    DWORD bytesRead = 0;
+    while (ReadFile(hFile, buffer.data(), CHUNK, &bytesRead, nullptr) && bytesRead > 0) {
+        if (BCryptHashData(hHash, buffer.data(), bytesRead, 0) != 0) {
+            CloseHandle(hFile);
+            BCryptDestroyHash(hHash);
+            BCryptCloseAlgorithmProvider(hAlg, 0);
+            return {};
+        }
+    }
+    CloseHandle(hFile);
+
+    BYTE hash[32] = { 0 };
+    if (BCryptFinishHash(hHash, hash, sizeof(hash), 0) != 0) {
+        BCryptDestroyHash(hHash);
+        BCryptCloseAlgorithmProvider(hAlg, 0);
+        return {};
+    }
+
+    BCryptDestroyHash(hHash);
+    BCryptCloseAlgorithmProvider(hAlg, 0);
+    return ToHex(hash, sizeof(hash));
+}
+
+// Path of the currently running .exe.
+static std::wstring GetSelfPath() {
+    wchar_t path[MAX_PATH] = { 0 };
+    GetModuleFileNameW(nullptr, path, MAX_PATH);
+    return std::wstring(path);
+}
+
+// Returns true if the running .exe matches the expected SHA-256.
+bool VerifyApplicationIntegrity() {
+    const std::wstring selfPath = GetSelfPath();
+    if (selfPath.empty()) return false;
+
+    const std::string actualHash = Sha256OfFile(selfPath);
+    if (actualHash.empty()) return false;
+
+    return _stricmp(actualHash.c_str(), EXPECTED_HASH.c_str()) == 0;
+}
+
+void HandleIntegrityFailure() {
+    MessageBoxA(
+        nullptr,
+        "Onyx failed its integrity verification.\n\n"
+        "This installation may be corrupted or modified. Onyx will not start. "
+        "You can uninstall it through Windows Settings and reinstall it from "
+        "the official source.",
+        "Onyx — Integrity Verification Failed",
+        MB_ICONERROR | MB_OK
+    );
+
+    // Open the installed-apps settings page so the user can uninstall.
+    ShellExecuteW(
+        nullptr,
+        L"open",
+        L"ms-settings:appsfeatures",
+        nullptr,
+        nullptr,
+        SW_SHOWNORMAL
+    );
+}
+
+int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
+    if (!VerifyApplicationIntegrity()) {
+        HandleIntegrityFailure();
+        return 1;
+    }
+
+    // Normal Onyx startup goes here.
+    return 0;
+}

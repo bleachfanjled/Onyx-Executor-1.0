@@ -200,7 +200,7 @@ export default function DownloadPage() {
             className="mt-8 font-mono text-xs"
             style={{ color: "#3A3A3A", letterSpacing: "0.06em", maxWidth: "480px" }}
           >
-            Disable antivirus before installing. Onyx requires elevated permissions to perform injection.
+            Never disable antivirus when donwloading exe files. Onyx doesn't need you to disable antivirus.
           </p>
         </div>
       </div>

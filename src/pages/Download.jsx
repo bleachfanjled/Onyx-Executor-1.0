@@ -11,12 +11,18 @@ export default function DownloadPage() {
   const [done, setDone] = useState(false);
   const [release, setRelease] = useState(null);
   const [releaseError, setReleaseError] = useState(false);
+  const [macRelease, setMacRelease] = useState(null);
+  const [macReleaseError, setMacReleaseError] = useState(false);
 
   useEffect(() => {
     base44.functions
       .invoke("getOnyxRelease", {})
       .then((res) => setRelease(res.data))
       .catch(() => setReleaseError(true));
+    base44.functions
+      .invoke("getOnyxMacOSRelease", {})
+      .then((res) => setMacRelease(res.data))
+      .catch(() => setMacReleaseError(true));
   }, []);
 
   const fileSize = "258 MB";
@@ -322,31 +328,32 @@ export default function DownloadPage() {
 
           {/* macOS label */}
           <p className="font-mono text-xs mt-10 mb-4" style={{ color: "#3A3A3A", letterSpacing: "0.1em" }}>
-            MACOS · .DMG
+            MACOS · .ZIP{macRelease ? ` · ${macRelease.sizeMb} MB` : ""}
           </p>
 
           {/* Download Button — macOS */}
           <a
-            href="https://github.com/bleachfanjled/Onyx-Executor/releases"
+            href={macRelease ? macRelease.downloadUrl : undefined}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Download Onyx for macOS"
             className="w-full max-w-lg mb-6 flex items-center justify-center gap-4 font-heading uppercase transition-sharp"
             style={{
               backgroundColor: "#0D0D0D",
-              color: "#959595",
+              color: macReleaseError ? "#3A3A3A" : "#959595",
               border: "1px solid #1A1A1A",
               padding: "20px 48px",
               fontWeight: 700,
               fontSize: "15px",
               letterSpacing: "0.1em",
               minHeight: "64px",
+              pointerEvents: macRelease ? "auto" : "none",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#3A3A3A"; e.currentTarget.style.color = "#FFFFFF"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1A1A1A"; e.currentTarget.style.color = "#959595"; }}
+            onMouseEnter={(e) => { if (macRelease) { e.currentTarget.style.borderColor = "#3A3A3A"; e.currentTarget.style.color = "#FFFFFF"; } }}
+            onMouseLeave={(e) => { if (macRelease) { e.currentTarget.style.borderColor = "#1A1A1A"; e.currentTarget.style.color = "#959595"; } }}
           >
             <Apple size={18} aria-hidden="true" />
-            DOWNLOAD FOR MACOS
+            {macReleaseError ? "UNAVAILABLE" : macRelease ? "DOWNLOAD FOR MACOS" : "LOADING..."}
           </a>
 
           {/* SHA Hash */}

@@ -62,7 +62,7 @@
 
     /* === SPOTLIGHT === */
     .onyx-spotlight { position: relative !important; z-index: 201 !important; animation: spotlightPulse 2s ease-in-out infinite !important; }
-    #blurOverlay { position: fixed; inset: 0; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); background: rgba(5,5,5,0.55); pointer-events: none; display: none; }
+    #blurTop, #blurBottom, #blurLeft, #blurRight { position: fixed; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); background: rgba(5,5,5,0.6); pointer-events: none; display: none; }
 
     /* === TOAST === */
     #toast { opacity: 0; transform: translateY(-8px); transition: opacity 220ms ease, transform 220ms ease, filter 220ms ease; filter: blur(4px); pointer-events: none; }
@@ -143,8 +143,11 @@
   <!-- ==================== ONBOARDING OVERLAY ==================== -->
   <div id="onboarding" class="fixed inset-0 z-[200] bg-[#050505] flex items-center justify-center opacity-0">
 
-    <!-- Blur overlay for tutorial spotlight -->
-    <div id="blurOverlay"></div>
+    <!-- Blur frame for tutorial spotlight -->
+    <div id="blurTop"></div>
+    <div id="blurBottom"></div>
+    <div id="blurLeft"></div>
+    <div id="blurRight"></div>
 
     <!-- SHA-256 Verification Screen -->
     <div id="verifyScreen" class="flex flex-col items-center gap-8 opacity-0 transition-all duration-500">

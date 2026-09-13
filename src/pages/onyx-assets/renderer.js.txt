@@ -551,7 +551,10 @@ document.addEventListener("click", (event) => {
 
 // === ONBOARDING SYSTEM ===
 const onboarding = document.getElementById("onboarding");
-const blurOverlay = document.getElementById("blurOverlay");
+const blurTop = document.getElementById("blurTop");
+const blurBottom = document.getElementById("blurBottom");
+const blurLeft = document.getElementById("blurLeft");
+const blurRight = document.getElementById("blurRight");
 const verifyScreen = document.getElementById("verifyScreen");
 const blockedScreen = document.getElementById("blockedScreen");
 const welcomeScreen = document.getElementById("welcomeScreen");
@@ -666,7 +669,6 @@ function startTutorial() {
   setTimeout(() => {
     welcomeScreen.style.display = "none";
     onboarding.style.background = "transparent";
-    blurOverlay.style.display = "block";
     showTutorialStep(0);
   }, 400);
 }
@@ -693,6 +695,11 @@ function showTutorialStep(step) {
   spotlightEl = target;
   target.classList.add("onyx-spotlight");
   const rect = target.getBoundingClientRect();
+  const bs = "position:fixed;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);background:rgba(5,5,5,0.6);pointer-events:none;display:block;";
+  blurTop.style.cssText = bs + "top:0;left:0;width:100%;height:" + rect.top + "px;";
+  blurBottom.style.cssText = bs + "top:" + rect.bottom + "px;left:0;width:100%;height:" + (window.innerHeight - rect.bottom) + "px;";
+  blurLeft.style.cssText = bs + "top:" + rect.top + "px;left:0;width:" + rect.left + "px;height:" + (rect.bottom - rect.top) + "px;";
+  blurRight.style.cssText = bs + "top:" + rect.top + "px;left:" + rect.right + "px;width:" + (window.innerWidth - rect.right) + "px;height:" + (rect.bottom - rect.top) + "px;";
   tutorialTooltip.style.display = "block";
   tutorialStepNum.textContent = `Step ${step + 1} / ${tutorialSteps.length}`;
   tutorialTitle.textContent = stepData.title;
@@ -715,7 +722,10 @@ function closeOnboarding() {
   if (spotlightEl) { spotlightEl.classList.remove("onyx-spotlight"); spotlightEl = null; }
   tutorialTooltip.style.opacity = "0";
   onboarding.style.opacity = "0";
-  blurOverlay.style.display = "none";
+  blurTop.style.display = "none";
+  blurBottom.style.display = "none";
+  blurLeft.style.display = "none";
+  blurRight.style.display = "none";
   setTimeout(() => { onboarding.style.display = "none"; onboarding.style.background = ""; }, 500);
 }
 

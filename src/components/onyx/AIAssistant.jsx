@@ -323,7 +323,7 @@ export default function AIAssistant({ open, onClose, getEditorContent, applyCode
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder="Ask me to fix your code..."
+            placeholder="Ask me to fix code or create code..."
             className="flex-1 px-3 py-2 text-xs text-white outline-none min-w-0"
             style={{
               backgroundColor: "#050505",

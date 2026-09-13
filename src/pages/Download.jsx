@@ -29,8 +29,8 @@ export default function DownloadPage() {
     catch(() => setMacReleaseError(true));
   }, []);
 
-  const fileSize = "261 MB";
-  const decompressedSize = "261 MB";
+  const fileSize = release ? `${release.sizeMb} MB` : "—";
+  const macFileSize = macRelease ? `${macRelease.sizeMb} MB` : "—";
 
   const handleDownload = () => {
     if (downloading || done || !release || !confirmed) return;
@@ -422,8 +422,8 @@ export default function DownloadPage() {
           <p
             className="font-heading text-white mb-2 mt-10"
             style={{ fontWeight: 700, fontSize: "clamp(20px, 3vw, 30px)", letterSpacing: "-0.03em" }}>
-            
-            331 MB
+
+            {macFileSize}
           </p>
           {/* macOS label */}
           <p className="font-mono text-xs mb-6" style={{ color: "#959595", letterSpacing: "0.1em" }}>

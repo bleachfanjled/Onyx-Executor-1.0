@@ -55,7 +55,8 @@
 
     /* === SPOTLIGHT === */
     .onyx-spotlight { position: relative !important; z-index: 201 !important; outline: 2px solid rgba(255,255,255,0.15); outline-offset: 3px; animation: spotlightPulse 2s ease-in-out infinite !important; }
-    #blurTop, #blurBottom, #blurLeft, #blurRight { position: fixed; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); background: rgba(5,5,5,0.6); pointer-events: none; display: none; }
+    .anim-actions { z-index: 201; }
+    #blurTop, #blurBottom, #blurLeft, #blurRight { position: fixed; background: rgba(5,5,5,0.72); pointer-events: none; display: none; }
 
     /* === TOAST === */
     #toast { opacity: 0; transform: translateY(-8px); transition: opacity 220ms ease, transform 220ms ease, filter 220ms ease; filter: blur(4px); pointer-events: none; }

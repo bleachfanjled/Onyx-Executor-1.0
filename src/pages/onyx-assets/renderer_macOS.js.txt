@@ -536,7 +536,7 @@ function showTutorialStep(step) {
   const rect = target.getBoundingClientRect();
   const pad = stepData.pad || 10;
   const t = rect.top - pad, b = rect.bottom + pad, l = rect.left - pad, r = rect.right + pad;
-  const bs = "position:fixed;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);background:rgba(5,5,5,0.6);pointer-events:none;display:block;";
+  const bs = "position:fixed;background:rgba(5,5,5,0.72);pointer-events:none;display:block;";
   blurTop.style.cssText = bs + "top:0;left:0;width:100%;height:" + t + "px;";
   blurBottom.style.cssText = bs + "top:" + b + "px;left:0;width:100%;height:" + (window.innerHeight - b) + "px;";
   blurLeft.style.cssText = bs + "top:" + t + "px;left:0;width:" + l + "px;height:" + (b - t) + "px;";

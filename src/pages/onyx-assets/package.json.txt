@@ -1,0 +1,29 @@
+{
+  "name": "onyx-executor",
+  "version": "1.0.0",
+  "description": "Onyx — Community Roblox Script Hub",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.onyx.executor",
+    "productName": "Onyx",
+    "win": {
+      "target": "nsis",
+      "icon": "icon.ico"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "renderer.js",
+      "icon.ico"
+    ]
+  }
+}

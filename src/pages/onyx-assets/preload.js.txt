@@ -1,0 +1,12 @@
+// =============================================================================
+// ONYX EXECUTOR — preload.js
+// Bridges IPC to the renderer via window.electronAPI.
+// index.html calls window.electronAPI.minimize() / .close() — this defines them.
+// =============================================================================
+
+const { contextBridge, ipcRenderer } = require("electron");
+
+contextBridge.exposeInMainWorld("electronAPI", {
+  minimize: () => ipcRenderer.send("window-minimize"),
+  close: () => ipcRenderer.send("window-close"),
+});

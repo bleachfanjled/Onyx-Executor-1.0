@@ -61,10 +61,6 @@
         Execute
       </button>
 
-      <button onclick="handleExecuteAll()" class="h-9 px-4 border border-white text-white text-[10px] uppercase tracking-widest hover:bg-white hover:text-black transition-all">
-        Execute All
-      </button>
-
       <button id="attachButton" onclick="handleAttach()" class="h-9 px-4 border border-[#3B82F6] text-[#3B82F6] text-[10px] uppercase tracking-widest hover:bg-[#3B82F6] hover:text-white transition-all">
         Attach
       </button>

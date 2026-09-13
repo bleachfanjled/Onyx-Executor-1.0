@@ -24,7 +24,7 @@ Response format:
 3. Explain what you changed and why
 4. Keep it concise and focused
 
-If there is no existing code in the editor, ask what we're building, and depending on what they say is how you react.`;
+If there is no existing code in the editor, ask what we're building, but if the user already stated what we're building then don't ask every generation, and depending on what they say is how you react.`;
 
 export default function AIAssistant({ open, onClose, getEditorContent, applyCode }) {
   const WELCOME_MSG = "Hey! I'm Onyx AI. I fix and reinforce your existing code, or you can ask me to generate code.";

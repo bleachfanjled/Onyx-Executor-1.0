@@ -216,7 +216,7 @@ function closeTab(tabId) {
 }
 
 async function handleAttachToggle() {
-  const res = window.onyx ? await window.onyx.attachToggle() : null;
+  const res = window.onyx ? await window.onyx.attachToggle(clientAttached) : null;
   if (res) {
     applyBackendResult(res);
     showNotification(res.attached ? "Roblox Client Attached" : "Roblox Processes Terminated");

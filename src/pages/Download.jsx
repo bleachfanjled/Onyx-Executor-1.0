@@ -275,7 +275,7 @@ export default function DownloadPage() {
             {fileSize}
           </p>
           <p className="font-mono text-xs mb-6" style={{ color: "#3A3A3A", letterSpacing: "0.1em" }}>
-            WINDOWS · .EXE
+            WINDOWS · .ZIP
           </p>
 
           {/* Download Button — Windows */}

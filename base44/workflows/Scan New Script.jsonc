@@ -1,0 +1,40 @@
+{
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "scan_new_script",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "scan": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "scanScript",
+            "args": {
+              "script_id": "${ .trigger.entity_id }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Scan script for malware",
+            "description": "Pattern-based safety scan"
+          }
+        }
+      }
+    ]
+  },
+  "name": "Scan New Script",
+  "description": "Automatically scans every newly shared script for malicious patterns and updates its safety status.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "Script"
+    }
+  }
+}

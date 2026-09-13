@@ -2,18 +2,18 @@ import { Link } from "react-router-dom";
 
 const features = [
   {
-    label: "Zero Detection",
-    description: "Engineered against every modern anti-cheat layer. Onyx operates in the void — unseen, undetected, unstoppable.",
+    label: "Safety-First Scanning",
+    description: "Every shared script is scanned for malicious patterns — loadstring payloads, remote fetches, clipboard theft — before it reaches you.",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="10" />
-        <path d="M4.93 4.93 19.07 19.07" />
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        <path d="m9 12 2 2 4-4" />
       </svg>
     ),
   },
   {
-    label: "Universal Script Support",
-    description: "Execute any Lua script with full API access. Every function, every library — all accessible from a single interface.",
+    label: "Community Script Hub",
+    description: "Create, share, and browse scripts in one place. Open, free, and built so you don't have to trust random pastebin links.",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <polyline points="16 18 22 12 16 6" />
@@ -22,11 +22,12 @@ const features = [
     ),
   },
   {
-    label: "Instant Injection",
-    description: "Sub-100ms injection time from launch to execution. No waiting. No lag. Pure, immediate performance.",
+    label: "Modest by Design",
+    description: "Level 4–6 capabilities — enough to have fun and explore, not enough to break games or ruin lobbies. Onyx is a tool, not a weapon.",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 6v6l4 2" />
       </svg>
     ),
   },
@@ -79,7 +80,7 @@ export default function Home() {
               className="font-mono text-xs"
               style={{ color: "#959595", letterSpacing: "0.1em" }}
             >
-              VERSION 1.0 — WINDOWS
+              LEVEL 4–6 — COMMUNITY PROJECT
             </span>
             <div
               className="w-1.5 h-1.5 rounded-full"
@@ -89,7 +90,7 @@ export default function Home() {
               className="font-mono text-xs"
               style={{ color: "#FFFFFF", letterSpacing: "0.1em" }}
             >
-              NOW LIVE
+              SAFETY FIRST
             </span>
           </div>
 
@@ -105,7 +106,7 @@ export default function Home() {
           >
             EXECUTE.
             <br />
-            DOMINATE.
+            EXPLORE.
             <br />
             <span style={{ color: "#959595" }}>ONYX.</span>
           </h1>
@@ -120,8 +121,8 @@ export default function Home() {
               lineHeight: 1.7,
             }}
           >
-            The precision instrument for Roblox script execution.
-            Cold, precise, and perfectly engineered.
+            A community-built Roblox script hub with safety-first scanning.
+            Share scripts, browse vetted code, and keep the fun without the malware.
           </p>
 
           {/* CTAs */}
@@ -147,7 +148,7 @@ export default function Home() {
               Download Now
             </Link>
             <Link
-              to="/changelog"
+              to="/scripts"
               className="inline-flex items-center justify-center font-heading text-sm uppercase transition-sharp"
               style={{
                 border: "1px solid #1A1A1A",
@@ -166,7 +167,7 @@ export default function Home() {
                 e.currentTarget.style.color = "#959595";
               }}
             >
-              Changelog
+              Browse Scripts
             </Link>
           </div>
         </div>
@@ -261,10 +262,10 @@ export default function Home() {
         >
           READY TO
           <br />
-          EXECUTE?
+          SHARE?
         </h2>
         <Link
-          to="/download"
+          to="/scripts"
           className="inline-flex items-center justify-center font-heading font-700 uppercase transition-sharp"
           style={{
             backgroundColor: "#FFFFFF",
@@ -278,7 +279,7 @@ export default function Home() {
           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#E0E0E0"; }}
           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#FFFFFF"; }}
         >
-          Get Onyx — Free
+          Browse Scripts
         </Link>
       </section>
     </div>

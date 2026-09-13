@@ -1,0 +1,48 @@
+{
+  "name": "Script",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "code": {
+      "type": "string"
+    },
+    "author_name": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "safety_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "safe",
+        "flagged",
+        "dangerous"
+      ],
+      "default": "pending"
+    },
+    "safety_score": {
+      "type": "number",
+      "default": 0
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "required": [
+    "title",
+    "code"
+  ]
+}

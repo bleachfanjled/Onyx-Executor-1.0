@@ -14,6 +14,7 @@ export default function Nav() {
   const links = [
     { label: "Home", path: "/" },
     { label: "Download", path: "/download" },
+    { label: "Scripts", path: "/scripts" },
     { label: "Changelog", path: "/changelog" },
     { label: "Requirements", path: "/requirements" },
     { label: "Preview", path: "/preview" },

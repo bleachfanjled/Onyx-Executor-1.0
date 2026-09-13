@@ -13,6 +13,10 @@ export default function DownloadPage() {
   const [releaseError, setReleaseError] = useState(false);
   const [macRelease, setMacRelease] = useState(null);
   const [macReleaseError, setMacReleaseError] = useState(false);
+  const [macDownloading, setMacDownloading] = useState(false);
+  const [macProgress, setMacProgress] = useState(0);
+  const [macDone, setMacDone] = useState(false);
+  const [modalPlatform, setModalPlatform] = useState("windows");
 
   useEffect(() => {
     base44.functions
@@ -43,11 +47,37 @@ export default function DownloadPage() {
         setTimeout(() => {
           setDownloading(false);
           setDone(true);
+          setModalPlatform("windows");
           setShowSafetyModal(true);
           window.location.href = release.downloadUrl;
         }, 300);
       } else {
         setProgress(Math.round(p));
+      }
+    }, 90);
+  };
+
+  const handleMacDownload = () => {
+    if (macDownloading || macDone || !macRelease || !confirmed) return;
+    setMacDownloading(true);
+    setMacProgress(0);
+
+    let p = 0;
+    const interval = setInterval(() => {
+      p += Math.random() * 18 + 4;
+      if (p >= 100) {
+        p = 100;
+        clearInterval(interval);
+        setMacProgress(100);
+        setTimeout(() => {
+          setMacDownloading(false);
+          setMacDone(true);
+          setModalPlatform("mac");
+          setShowSafetyModal(true);
+          window.location.href = macRelease.downloadUrl;
+        }, 300);
+      } else {
+        setMacProgress(Math.round(p));
       }
     }, 90);
   };
@@ -274,7 +304,7 @@ export default function DownloadPage() {
           >
             {fileSize}
           </p>
-          <p className="font-mono text-xs mb-6" style={{ color: "#3A3A3A", letterSpacing: "0.1em" }}>
+          <p className="font-mono text-xs mb-6" style={{ color: "#959595", letterSpacing: "0.1em" }}>
             WINDOWS · .ZIP
           </p>
 
@@ -327,34 +357,49 @@ export default function DownloadPage() {
           </div>
 
           {/* macOS label */}
-          <p className="font-mono text-xs mt-10 mb-4" style={{ color: "#3A3A3A", letterSpacing: "0.1em" }}>
+          <p className="font-mono text-xs mt-10 mb-4" style={{ color: "#959595", letterSpacing: "0.1em" }}>
             MACOS · .ZIP{macRelease ? ` · ${macRelease.sizeMb} MB` : ""}
           </p>
 
           {/* Download Button — macOS */}
-          <a
-            href={macRelease ? macRelease.downloadUrl : undefined}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Download Onyx for macOS"
-            className="w-full max-w-lg mb-6 flex items-center justify-center gap-4 font-heading uppercase transition-sharp"
-            style={{
-              backgroundColor: "#0D0D0D",
-              color: macReleaseError ? "#3A3A3A" : "#959595",
-              border: "1px solid #1A1A1A",
-              padding: "20px 48px",
-              fontWeight: 700,
-              fontSize: "15px",
-              letterSpacing: "0.1em",
-              minHeight: "64px",
-              pointerEvents: macRelease ? "auto" : "none",
-            }}
-            onMouseEnter={(e) => { if (macRelease) { e.currentTarget.style.borderColor = "#3A3A3A"; e.currentTarget.style.color = "#FFFFFF"; } }}
-            onMouseLeave={(e) => { if (macRelease) { e.currentTarget.style.borderColor = "#1A1A1A"; e.currentTarget.style.color = "#959595"; } }}
-          >
-            <Apple size={18} aria-hidden="true" />
-            {macReleaseError ? "UNAVAILABLE" : macRelease ? "DOWNLOAD FOR MACOS" : "LOADING..."}
-          </a>
+          <div className="relative w-full max-w-lg mb-6">
+            {macDownloading && (
+              <div
+                aria-hidden="true"
+                className="absolute top-0 left-0 h-px transition-all duration-100"
+                style={{ width: `${macProgress}%`, backgroundColor: "#FFFFFF" }}
+              />
+            )}
+            <button
+              onClick={handleMacDownload}
+              disabled={macDownloading || (!macRelease && !macReleaseError) || (!confirmed && !macDone)}
+              aria-label="Download Onyx for macOS"
+              className="w-full flex items-center justify-center gap-4 font-heading uppercase focus:outline-white disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: macDone ? "#0D0D0D" : confirmed ? "#FFFFFF" : "#0D0D0D",
+                color: macDone ? "#FFFFFF" : confirmed ? "#050505" : "#3A3A3A",
+                border: macDone ? "1px solid #1A1A1A" : confirmed ? "1px solid #FFFFFF" : "1px solid #1A1A1A",
+                padding: "24px 48px",
+                fontWeight: 800,
+                fontSize: "16px",
+                letterSpacing: "0.1em",
+                minHeight: "72px",
+              }}
+              onMouseEnter={(e) => { if (!macDownloading && !macDone && confirmed) e.currentTarget.style.backgroundColor = "#E0E0E0"; }}
+              onMouseLeave={(e) => { if (!macDownloading && !macDone && confirmed) e.currentTarget.style.backgroundColor = "#FFFFFF"; }}
+            >
+              <Download size={18} aria-hidden="true" />
+              {macDone
+                ? "DOWNLOAD STARTED"
+                : macDownloading
+                ? `PREPARING — ${macProgress}%`
+                : macReleaseError
+                ? "UNAVAILABLE"
+                : confirmed
+                ? "DOWNLOAD ONYX FREE"
+                : "CONFIRM ABOVE TO DOWNLOAD"}
+            </button>
+          </div>
 
           {/* SHA Hash */}
           <div
@@ -461,7 +506,7 @@ export default function DownloadPage() {
                 className="font-body mb-6"
                 style={{ color: "#959595", fontSize: "14px", lineHeight: 1.6 }}
               >
-                Your download has started. For your security, only run Onyx from official sources.
+                Your {modalPlatform === "mac" ? "macOS" : "Windows"} download has started. For your security, only run Onyx from official sources.
                 Third-party reuploads may contain malware or modified binaries.
               </p>
 

@@ -161,7 +161,7 @@
         </div>
       </div>
       <div class="text-center">
-        <h2 class="text-white text-sm font-bold uppercase tracking-[0.3em] mb-2">Malware Scan</h2>
+        <h2 class="text-white text-sm font-bold uppercase tracking-[0.3em] mb-2">Scanning For Malware</h2>
         <p id="verifyStatus" class="text-[#959595] text-xs">Initializing...</p>
       </div>
       <div class="w-48 h-px bg-[#1A1A1A] overflow-hidden relative">

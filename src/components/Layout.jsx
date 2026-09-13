@@ -9,24 +9,24 @@ export default function Layout() {
         <Outlet />
       </main>
       <footer
-        className="mt-auto"
-        style={{ borderTop: "1px solid #1A1A1A", padding: "32px 24px" }}
-      >
+        className="mt-auto hidden"
+        style={{ borderTop: "1px solid #1A1A1A", padding: "32px 24px" }}>
+        
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <span
             className="font-mono text-xs"
-            style={{ color: "#959595", letterSpacing: "0.08em" }}
-          >
+            style={{ color: "#959595", letterSpacing: "0.08em" }}>
+            
             © 2026 ONYX. ALL RIGHTS RESERVED.
           </span>
           <span
             className="font-mono text-xs"
-            style={{ color: "#3A3A3A", letterSpacing: "0.06em" }}
-          >
+            style={{ color: "#3A3A3A", letterSpacing: "0.06em" }}>
+            
             USE AT YOUR OWN RISK.
           </span>
         </div>
       </footer>
-    </div>
-  );
+    </div>);
+
 }

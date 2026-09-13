@@ -363,7 +363,7 @@ export default function DownloadPage() {
           </p>
           {/* macOS label */}
           <p className="font-mono text-xs mb-6" style={{ color: "#959595", letterSpacing: "0.1em" }}>
-            MACOS · .ZIP
+            MACOS · .ZIP · .DMG
           </p>
 
           {/* Download Button — macOS */}

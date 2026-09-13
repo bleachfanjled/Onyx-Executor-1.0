@@ -192,6 +192,7 @@ const state = {
 };
 
 function appendConsoleLine(text, color = "#959595") {
+  if (!consoleEl) return;
   const line = document.createElement("p");
   line.className = "text-[11px]";
   line.style.color = color;
@@ -513,6 +514,10 @@ function handleClear() {
   showNotification("Editor cleared.");
 }
 
+function handleAI() {
+  window.parent.postMessage({ type: "onyx-toggle-ai" }, "*");
+}
+
 editor.addEventListener("input", () => {
   const activeTab = getActiveTab();
   if (activeTab) activeTab.content = editor.value;
@@ -578,20 +583,19 @@ let spotlightEl = null;
 const isMac = window.electronAPI && window.electronAPI.platform === "darwin";
 
 const tutorialSteps = [
-  { target: "#scriptEditor", title: "Script Editor", desc: "Write and edit your Lua scripts here. The editor supports multi-line editing and auto-saves content to your active tab." },
-  { target: "#tabs > div:first-child", title: "Script Tabs", desc: "Manage multiple scripts simultaneously. Click + to add a tab, double-click a tab name to rename it, right-click for more options." },
-  { target: 'button[onclick="handleExecute()"]', title: "Execute", desc: "Runs the script in your active tab. Make sure to Attach to Roblox first before executing any script." },
-  { target: "#attachButton", title: "Attach", desc: "Connects Onyx to the Roblox process. This is required before you can execute any scripts." },
-  { target: 'button[onclick="handleKillRoblox()"]', title: "Kill Roblox", desc: "Force-terminates all Roblox processes. Use this if something goes wrong or you need a clean restart." },
-  { target: 'button[onclick="handleCopy()"]', title: "Copy", desc: "Copies the active script to your system clipboard for easy sharing or backup." },
-  { target: 'button[onclick="handleLoad()"]', title: "Load", desc: "Open a .lua, .txt, or .luac script file from your computer directly into the editor." },
-  { target: 'button[onclick="handleDownload()"]', title: "Save", desc: "Saves your active script as a .lua file to your computer." },
-  { target: 'button[onclick="handleClear()"]', title: "Clear", desc: "Clears all content from the editor. Make sure you've saved your script if needed." },
-  { target: "#console", title: "Console", desc: "View execution logs, status messages, and error reports here in real time as you work." },
-  { target: "#statusText", title: "Status Indicator", desc: "Shows your current connection state — Idle (disconnected) or Attached (connected to Roblox)." },
+  { target: "#scriptEditor", pad: 8, title: "Script Editor", desc: "Write and edit your Lua scripts here. The editor supports multi-line editing and auto-saves content to your active tab." },
+  { target: "#tabs > div:first-child", pad: 4, title: "Script Tabs", desc: "Manage multiple scripts simultaneously. Click + to add a tab, double-click a tab name to rename it, right-click for more options." },
+  { target: 'button[onclick="handleExecute()"]', pad: 2, title: "Execute", desc: "Runs the script in your active tab. Make sure to Attach to Roblox first before executing any script." },
+  { target: "#attachButton", pad: 2, title: "Attach", desc: "Connects Onyx to the Roblox process. This is required before you can execute any scripts." },
+  { target: 'button[onclick="handleKillRoblox()"]', pad: 2, title: "Kill Roblox", desc: "Force-terminates all Roblox processes. Use this if something goes wrong or you need a clean restart." },
+  { target: 'button[onclick="handleCopy()"]', pad: 2, title: "Copy", desc: "Copies the active script to your system clipboard for easy sharing or backup." },
+  { target: 'button[onclick="handleLoad()"]', pad: 2, title: "Load", desc: "Open a .lua, .txt, or .luac script file from your computer directly into the editor." },
+  { target: 'button[onclick="handleDownload()"]', pad: 2, title: "Save", desc: "Saves your active script as a .lua file to your computer." },
+  { target: 'button[onclick="handleClear()"]', pad: 2, title: "Clear", desc: "Clears all content from the editor. Make sure you've saved your script if needed." },
+  { target: "#statusText", pad: 6, title: "Status Indicator", desc: "Shows your current connection state — Idle (disconnected) or Attached (connected to Roblox)." },
   isMac
-    ? { target: "#titleBar", title: "Window Controls", desc: "Use the native macOS traffic light buttons (red, yellow, green) in the top-left corner to close, minimize, or fullscreen Onyx." }
-    : { target: "#windowControls", title: "Window Controls", desc: "Minimize, toggle fullscreen, or close the Onyx window. Hover over the dots to reveal the icons." },
+    ? { target: "#titleBar", pad: 6, title: "Window Controls", desc: "Use the native macOS traffic light buttons (red, yellow, green) in the top-left corner to close, minimize, or fullscreen Onyx." }
+    : { target: "#windowControls", pad: 6, title: "Window Controls", desc: "Minimize, toggle fullscreen, or close the Onyx window. Hover over the dots to reveal the icons." },
 ];
 
 function initOnboarding() {
@@ -695,7 +699,7 @@ function showTutorialStep(step) {
   spotlightEl = target;
   target.classList.add("onyx-spotlight");
   const rect = target.getBoundingClientRect();
-  const pad = 10;
+  const pad = stepData.pad || 10;
   const t = rect.top - pad, b = rect.bottom + pad, l = rect.left - pad, r = rect.right + pad;
   const bs = "position:fixed;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);background:rgba(5,5,5,0.6);pointer-events:none;display:block;";
   blurTop.style.cssText = bs + "top:0;left:0;width:100%;height:" + t + "px;";

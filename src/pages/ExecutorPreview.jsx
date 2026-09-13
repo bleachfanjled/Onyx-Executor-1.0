@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import indexHtmlUrl from "./onyx-assets/index.html.txt?raw";
 import rendererJsUrl from "./onyx-assets/renderer.js.txt?raw";
+import AIAssistant from "@/components/onyx/AIAssistant";
 
 // Start fetching immediately at module load time (before component mount)
 // Also inline the Tailwind CDN script so the iframe has zero external requests
@@ -18,6 +19,7 @@ const srcDocPromise = Promise.all([
 
 export default function ExecutorPreview() {
   const [srcDoc, setSrcDoc] = useState("");
+  const [aiOpen, setAiOpen] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -26,8 +28,19 @@ export default function ExecutorPreview() {
     ]).then(([doc]) => setSrcDoc(doc));
   }, []);
 
+  useEffect(() => {
+    const handler = (event) => {
+      if (event.data && event.data.type === "onyx-toggle-ai") {
+        setAiOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
+
   return (
-    <div className="bg-obsidian" style={{ backgroundColor: "#050505", paddingTop: "56px", height: "100vh" }}>
+    <div className="bg-obsidian relative" style={{ backgroundColor: "#050505", paddingTop: "56px", height: "100vh" }}>
+      <AIAssistant open={aiOpen} onClose={() => setAiOpen(false)} />
       {srcDoc ? (
         <iframe
           srcDoc={srcDoc}

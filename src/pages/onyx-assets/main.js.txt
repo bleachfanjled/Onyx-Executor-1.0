@@ -56,7 +56,13 @@ ipcMain.on("window-close", () => {
   if (mainWindow) mainWindow.close();
 });
 
-app.whenReady().then(createWindow);
+app.whenReady().then(createWindow).catch((err) => {
+  dialog.showErrorBox(
+    "Onyx — Startup Error",
+    "Failed to create the application window:\n\n" +
+      (err && err.stack ? err.stack : String(err))
+  );
+});
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();

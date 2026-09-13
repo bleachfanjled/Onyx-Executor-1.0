@@ -15,15 +15,13 @@
     "appId": "com.onyx.executor",
     "productName": "Onyx",
     "win": {
-      "target": "nsis",
-      "icon": "icon.ico"
+      "target": "nsis"
     },
     "files": [
       "main.js",
       "preload.js",
       "index.html",
-      "renderer.js",
-      "icon.ico"
+      "renderer.js"
     ]
   }
 }

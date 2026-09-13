@@ -149,28 +149,6 @@ export default function Home() {
             >
               Download Now
             </Link>
-            <Link
-              to="/scripts"
-              className="inline-flex items-center justify-center font-heading text-sm uppercase transition-sharp"
-              style={{
-                border: "1px solid #1A1A1A",
-                color: "#959595",
-                padding: "16px 48px",
-                letterSpacing: "0.12em",
-                fontWeight: 500,
-                minHeight: "44px",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "#3A3A3A";
-                e.currentTarget.style.color = "#FFFFFF";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "#1A1A1A";
-                e.currentTarget.style.color = "#959595";
-              }}
-            >
-              Browse Scripts
-            </Link>
           </div>
         </div>
 
@@ -247,43 +225,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA Strip */}
-      <section
-        className="max-w-7xl mx-auto px-6 py-24 text-center"
-        style={{ borderBottom: "1px solid #1A1A1A" }}
-      >
-        <p
-          className="font-mono text-xs mb-6"
-          style={{ color: "#3A3A3A", letterSpacing: "0.14em" }}
-        >
-          — FREE. OPEN. IMMEDIATE. —
-        </p>
-        <h2
-          className="font-heading text-white mb-10"
-          style={{ fontWeight: 900, fontSize: "clamp(36px, 6vw, 80px)", letterSpacing: "-0.05em", lineHeight: 0.95 }}
-        >
-          READY TO
-          <br />
-          SHARE?
-        </h2>
-        <Link
-          to="/scripts"
-          className="inline-flex items-center justify-center font-heading font-700 uppercase transition-sharp"
-          style={{
-            backgroundColor: "#FFFFFF",
-            color: "#050505",
-            padding: "18px 64px",
-            letterSpacing: "0.12em",
-            fontWeight: 700,
-            fontSize: "14px",
-            minHeight: "44px",
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#E0E0E0"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#FFFFFF"; }}
-        >
-          Browse Scripts
-        </Link>
-      </section>
     </div>
   );
 }

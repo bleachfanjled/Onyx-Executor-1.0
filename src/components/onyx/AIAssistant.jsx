@@ -24,8 +24,10 @@ Response format:
 If there is no existing code in the editor, politely explain that you only fix existing code, not write new scripts, and ask the user to add their code first.`;
 
 export default function AIAssistant({ open, onClose, getEditorContent, applyCode }) {
+  const WELCOME_MSG = "Hey! I'm Onyx AI. I fix and reinforce your existing code — but I won't write new scripts for you. Share what you're working on and I'll help you improve it.";
+
   const [messages, setMessages] = useState([
-    { role: "assistant", content: "Hey! I'm Onyx AI. I fix and reinforce your existing code — but I won't write new scripts for you. Share what you're working on and I'll help you improve it." },
+    { role: "assistant", content: WELCOME_MSG },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,6 +43,21 @@ export default function AIAssistant({ open, onClose, getEditorContent, applyCode
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, thinking]);
+
+  // Reset conversation when the panel closes — no chat memory between sessions
+  useEffect(() => {
+    if (!open) {
+      setMessages([{ role: "assistant", content: WELCOME_MSG }]);
+      setInput("");
+      setAttachments([]);
+      setThinking(false);
+      setLoading(false);
+      if (streamRef.current) {
+        clearInterval(streamRef.current);
+        streamRef.current = null;
+      }
+    }
+  }, [open]);
 
   useEffect(() => {
     return () => {
@@ -91,13 +108,10 @@ export default function AIAssistant({ open, onClose, getEditorContent, applyCode
         editorContent = await getEditorContent();
       }
 
-      const conversation = newMessages
-        .map((m) => `${m.role === "user" ? "User" : "Onyx AI"}: ${m.content}`)
-        .join("\n");
-
-      let prompt = `${SYSTEM_PROMPT}\n\nConversation so far:\n${conversation}\n\nOnyx AI:`;
+      // Stateless: only send the current message + editor content — no conversation history
+      let prompt = `${SYSTEM_PROMPT}\n\nUser's message:\n${text}\n\nOnyx AI:`;
       if (editorContent && editorContent.trim()) {
-        prompt = `${SYSTEM_PROMPT}\n\nThe user's current code in the editor:\n\`\`\`lua\n${editorContent}\n\`\`\`\n\nConversation so far:\n${conversation}\n\nOnyx AI:`;
+        prompt = `${SYSTEM_PROMPT}\n\nThe user's current code in the editor:\n\`\`\`lua\n${editorContent}\n\`\`\`\n\nUser's message:\n${text}\n\nOnyx AI:`;
       }
 
       const res = await base44.integrations.Core.InvokeLLM({

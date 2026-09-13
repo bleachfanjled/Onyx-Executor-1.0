@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import indexHtmlUrl from "./onyx-assets/index.html.txt?raw";
-import rendererJsUrl from "./onyx-assets/renderer.js.txt?raw";
+import indexHtmlUrl from "./onyx-assets/index.html.txt?url";
+import rendererJsUrl from "./onyx-assets/renderer.js.txt?url";
 import AIAssistant from "@/components/onyx/AIAssistant";
 
-// Start fetching immediately at module load time (before component mount)
-// Also inline the Tailwind CDN script so the iframe has zero external requests
+// ?url imports resolve to proper asset URLs that work in both dev and
+// production builds. Fetch the content at runtime, inline Tailwind CDN.
 const srcDocPromise = Promise.all([
   fetch(indexHtmlUrl).then((r) => r.text()),
   fetch(rendererJsUrl).then((r) => r.text()),
@@ -15,7 +15,7 @@ const srcDocPromise = Promise.all([
     result = result.replace('<script src="https://cdn.tailwindcss.com"></script>', `<script>${tailwind}</script>`);
   }
   return result;
-});
+}).catch(() => "<html><body style='background:#050505;color:#959595;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:12px'><p style='font-size:14px;color:#fff'>ONYX</p><p style='font-size:12px'>Preview unavailable — please refresh the page.</p></body></html>");
 
 export default function ExecutorPreview() {
   const [srcDoc, setSrcDoc] = useState("");
@@ -47,7 +47,7 @@ export default function ExecutorPreview() {
     Promise.all([
       srcDocPromise,
       new Promise((r) => setTimeout(r, 900)),
-    ]).then(([doc]) => setSrcDoc(doc));
+    ]).then(([doc]) => setSrcDoc(doc)).catch(() => setSrcDoc(""));
   }, []);
 
   useEffect(() => {

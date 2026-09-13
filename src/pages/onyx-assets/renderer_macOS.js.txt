@@ -413,7 +413,7 @@ const isMac = true;
 
 const tutorialSteps = [
   { target: "#scriptEditor", title: "Script Editor", desc: "Write and edit your Lua scripts here. The editor supports multi-line editing and auto-saves content to your active tab." },
-  { target: "#tabs", title: "Script Tabs", desc: "Manage multiple scripts simultaneously. Click + to add a tab, double-click a tab name to rename it, right-click for more options." },
+  { target: "#tabs > div:first-child", title: "Script Tabs", desc: "Manage multiple scripts simultaneously. Click + to add a tab, double-click a tab name to rename it, right-click for more options." },
   { target: 'button[onclick="handleExecute()"]', title: "Execute", desc: "Runs the script in your active tab. Make sure to Attach to Roblox first before executing any script." },
   { target: "#attachButton", title: "Attach", desc: "Connects Onyx to the Roblox process. This is required before you can execute any scripts." },
   { target: 'button[onclick="handleKillRoblox()"]', title: "Kill Roblox", desc: "Force-terminates all Roblox processes. Use this if something goes wrong or you need a clean restart." },

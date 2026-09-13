@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Download, Shield, Monitor, X, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Download, Shield, Monitor, Apple, X, ShieldCheck, AlertTriangle } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
 const VERSION = "1.0";
@@ -117,6 +117,13 @@ export default function DownloadPage() {
             </div>
             <div style={{ width: "1px", height: "12px", backgroundColor: "#1A1A1A" }} aria-hidden="true" />
             <div className="flex items-center gap-3">
+              <Apple size={14} style={{ color: "#959595" }} aria-hidden="true" />
+              <span className="font-mono text-xs" style={{ color: "#959595", letterSpacing: "0.08em" }}>
+                MACOS 11+
+              </span>
+            </div>
+            <div style={{ width: "1px", height: "12px", backgroundColor: "#1A1A1A" }} aria-hidden="true" />
+            <div className="flex items-center gap-3">
               <Shield size={14} style={{ color: "#959595" }} aria-hidden="true" />
               <span className="font-mono text-xs" style={{ color: "#959595", letterSpacing: "0.08em" }}>
                 VERIFIED CLEAN
@@ -177,7 +184,7 @@ export default function DownloadPage() {
                   },
                   {
                     title: "Check the hash of your downloaded file",
-                    body: "Windows: open PowerShell and run  Get-FileHash .\\Onyx.exe -Algorithm SHA256  — compare the result to the hash on this page.",
+                    body: "Windows (PowerShell): Get-FileHash .\\Onyx.exe -Algorithm SHA256  ·  macOS (Terminal): shasum -a 256 Onyx.dmg  — compare the result to the hash on this page.",
                   },
                   {
                     title: "Only run it if they match exactly",
@@ -256,13 +263,16 @@ export default function DownloadPage() {
 
           {/* App size */}
           <p
-            className="font-heading text-white mb-6"
+            className="font-heading text-white mb-2"
             style={{ fontWeight: 700, fontSize: "clamp(20px, 3vw, 30px)", letterSpacing: "-0.03em" }}
           >
             {fileSize}
           </p>
+          <p className="font-mono text-xs mb-6" style={{ color: "#3A3A3A", letterSpacing: "0.1em" }}>
+            WINDOWS · .EXE
+          </p>
 
-          {/* Download Button */}
+          {/* Download Button — Windows */}
           <div className="relative w-full max-w-lg mb-6">
             {/* Loading bar on top border */}
             {downloading && (
@@ -309,6 +319,35 @@ export default function DownloadPage() {
                 : "CONFIRM ABOVE TO DOWNLOAD"}
             </button>
           </div>
+
+          {/* macOS label */}
+          <p className="font-mono text-xs mt-10 mb-4" style={{ color: "#3A3A3A", letterSpacing: "0.1em" }}>
+            MACOS · .DMG
+          </p>
+
+          {/* Download Button — macOS */}
+          <a
+            href="https://github.com/bleachfanjled/Onyx-Executor/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Download Onyx for macOS"
+            className="w-full max-w-lg mb-6 flex items-center justify-center gap-4 font-heading uppercase transition-sharp"
+            style={{
+              backgroundColor: "#0D0D0D",
+              color: "#959595",
+              border: "1px solid #1A1A1A",
+              padding: "20px 48px",
+              fontWeight: 700,
+              fontSize: "15px",
+              letterSpacing: "0.1em",
+              minHeight: "64px",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#3A3A3A"; e.currentTarget.style.color = "#FFFFFF"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1A1A1A"; e.currentTarget.style.color = "#959595"; }}
+          >
+            <Apple size={18} aria-hidden="true" />
+            DOWNLOAD FOR MACOS
+          </a>
 
           {/* SHA Hash */}
           <div

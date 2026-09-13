@@ -4,8 +4,9 @@ const REQUIREMENT_GROUPS = [
     items: [
       { name: "Windows 11 (64-bit)", supported: true },
       { name: "Windows 10 (64-bit, build 19041+)", supported: true },
+      { name: "macOS 11 Big Sur or newer", supported: true },
       { name: "Windows 8.1 / 8 / 7", supported: false },
-      { name: "macOS / Linux", supported: false },
+      { name: "Linux", supported: false },
     ],
   },
   {
@@ -20,9 +21,9 @@ const REQUIREMENT_GROUPS = [
   {
     label: "SOFTWARE DEPENDENCIES",
     items: [
-      { name: ".NET Framework 4.8+", detail: "Required for UI runtime", supported: true },
-      { name: "Visual C++ 2019 Redistributable", detail: "Required for core libraries", supported: true },
-      { name: "Roblox Client", detail: "Latest version installed", supported: true },
+      { name: ".NET Framework 4.8+", detail: "Required for UI runtime (Windows only)", supported: true },
+      { name: "Visual C++ 2019 Redistributable", detail: "Required for core libraries (Windows only)", supported: true },
+      { name: "Roblox Client", detail: "Latest version installed (Windows & macOS)", supported: true },
       { name: "Active internet connection", detail: "For version checks and updates", supported: true },
     ],
   },
@@ -127,8 +128,8 @@ export default function Requirements() {
               NOTE
             </p>
             <p style={{ color: "#959595", fontSize: "14px", lineHeight: 1.7 }}>
-              Onyx is designed exclusively for Windows. There are no plans for macOS or Linux support.
-              Administrator privileges are required only during installation, not for daily execution.
+              Onyx supports Windows 10/11 (64-bit) and macOS 11 Big Sur or newer. Linux is not supported.
+              Administrator privileges are required only during installation on Windows, not for daily execution.
             </p>
           </div>
         </div>

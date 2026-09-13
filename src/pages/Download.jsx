@@ -29,8 +29,8 @@ export default function DownloadPage() {
     catch(() => setMacReleaseError(true));
   }, []);
 
-  const fileSize = "258 MB";
-  const decompressedSize = "258 MB";
+  const fileSize = "261 MB";
+  const decompressedSize = "261 MB";
 
   const handleDownload = () => {
     if (downloading || done || !release || !confirmed) return;

@@ -426,8 +426,8 @@ const tutorialSteps = [
   { target: 'button[onclick="handleLoad()"]', pad: 2, title: "Load", desc: "Open a .lua, .txt, or .luac script file from your computer directly into the editor." },
   { target: 'button[onclick="handleDownload()"]', pad: 2, title: "Save", desc: "Saves your active script as a .lua file to your computer." },
   { target: 'button[onclick="handleClear()"]', pad: 2, title: "Clear", desc: "Clears all content from the editor. Make sure you've saved your script if needed." },
+  { target: 'button[onclick="handleAI()"]', pad: 2, title: "AI Assistant", desc: "Opens the Onyx AI educational assistant. Ask questions about Lua scripting and Roblox development — it will teach concepts but won't write scripts for you." },
   { target: "#statusText", pad: 6, title: "Status Indicator", desc: "Shows your current connection state — Idle (disconnected) or Attached (connected to Roblox)." },
-  { target: "#titleBar", pad: 6, title: "Window Controls", desc: "Use the native macOS traffic light buttons (red, yellow, green) in the top-left corner to close, minimize, or fullscreen Onyx." },
 ];
 
 function initOnboarding() {

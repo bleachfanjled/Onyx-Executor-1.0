@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "dist": "electron-builder --win --x64",
     "build": "electron-builder --win --x64"
   },
   "devDependencies": {
@@ -14,8 +15,21 @@
   "build": {
     "appId": "com.onyx.executor",
     "productName": "Onyx",
+    "copyright": "Onyx",
     "win": {
-      "target": "nsis"
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChooseInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "desktopShortcutName": "Onyx",
+      "startMenuShortcutName": "Onyx",
+      "shortcutName": "Onyx"
     },
     "files": [
       "main.js",

@@ -6,6 +6,13 @@
 const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 
+// Set the AppUserModelID so Windows groups the window correctly on the
+// taskbar and the pinned shortcut resolves to the installed Onyx.exe
+// (not to electron.exe or a loose renderer.js file).
+if (process.platform === "win32") {
+  app.setAppUserModelId("com.onyx.executor");
+}
+
 let mainWindow = null;
 
 // Catch uncaught exceptions in the main process so we can log them

@@ -27,7 +27,7 @@ Response format:
 If there is no existing code in the editor, ask what we're building, and depending on what they say is how you react.`;
 
 export default function AIAssistant({ open, onClose, getEditorContent, applyCode }) {
-  const WELCOME_MSG = "Hey! I'm Onyx AI. I fix and reinforce your existing code — but I won't write new scripts for you. Share what you're working on and I'll help you improve it.";
+  const WELCOME_MSG = "Hey! I'm Onyx AI. I fix and reinforce your existing code, or you can ask me to generate code.";
 
   const [messages, setMessages] = useState([
     { role: "assistant", content: WELCOME_MSG },

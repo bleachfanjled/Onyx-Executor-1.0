@@ -24,7 +24,7 @@ Response format:
 3. Explain what you changed and why
 4. Keep it concise and focused
 
-If there is no existing code in the editor, politely explain that you only fix existing code, not write new scripts, and ask the user to add their code first.`;
+If there is no existing code in the editor, ask what we're building, and depending on what they say is how you react.`;
 
 export default function AIAssistant({ open, onClose, getEditorContent, applyCode }) {
   const WELCOME_MSG = "Hey! I'm Onyx AI. I fix and reinforce your existing code — but I won't write new scripts for you. Share what you're working on and I'll help you improve it.";

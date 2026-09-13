@@ -1,0 +1,147 @@
+// =============================================================================
+// ONYX EXECUTOR — onyx_addon_macOS.cpp
+// N-API bridge between the C++ backend (execution_macOS.cpp) and the JS frontend.
+// Exposes the ExecutorApp shell — attach / execute / file I/O / console / status —
+// to Electron's main process. The renderer reaches it via IPC (preload.js).
+//
+// Build (macOS; needs Xcode Command Line Tools + node-gyp + node-addon-api):
+//   npm install
+//   npm run rebuild        ->  build/Release/onyx.node
+//   npm start              ->  Electron loads it in main_macOS.js
+//
+// execution_macOS.cpp is #include'd here as one translation unit. In a larger
+// project you would split it into execution.h / execution.cpp and link them
+// separately.
+//
+// The actual process-injection call is intentionally NOT exposed — it remains
+// stubbed inside execution::execute() (returns NotImplemented). Wire that to
+// your own private module; this bridge will not build injection for you.
+// =============================================================================
+
+#include <napi.h>
+#include "execution_macOS.cpp"   // namespace onyx: ExecutorApp, ConsoleBuffer, fileio, ...
+
+namespace {
+
+onyx::ExecutorApp& app() {
+    static onyx::ExecutorApp instance;
+    return instance;
+}
+
+// Return the new console lines produced since `before`, plus current status
+// and attach flag. Each IPC call returns only what it produced — the renderer
+// appends these lines to the DOM, no full-console resync needed.
+Napi::Value buildResult(Napi::Env env, size_t before) {
+    const auto& lines = app().console.lines();
+    size_t end = lines.size();
+    auto arr = Napi::Array::New(env, end > before ? end - before : 0);
+    for (size_t i = before; i < end; ++i) {
+        auto obj = Napi::Object::New(env);
+        obj.Set("text", Napi::String::New(env, lines[i].text));
+        obj.Set("color", Napi::String::New(env, lines[i].color));
+        arr.Set(i - before, obj);
+    }
+
+    auto status = Napi::Object::New(env);
+    status.Set("text", Napi::String::New(env, app().status.text));
+    status.Set("active", Napi::Boolean::New(env, app().status.active));
+
+    auto result = Napi::Object::New(env);
+    result.Set("lines", arr);
+    result.Set("status", status);
+    result.Set("attached", Napi::Boolean::New(env, app().attach.isAttached()));
+    return result;
+}
+
+Napi::Value _init(const Napi::CallbackInfo& info) {
+    (void)app();
+    return info.Env().Undefined();
+}
+
+Napi::Value _attachToggle(const Napi::CallbackInfo& info) {
+    auto env = info.Env();
+    size_t before = app().console.lines().size();
+    app().handleAttachToggle();
+    return buildResult(env, before);
+}
+
+Napi::Value _execute(const Napi::CallbackInfo& info) {
+    auto env = info.Env();
+    std::string script = (info.Length() >= 1 && info[0].IsString())
+                             ? info[0].As<Napi::String>().Utf8Value()
+                             : "";
+    size_t before = app().console.lines().size();
+    app().handleExecute(script);
+    return buildResult(env, before);
+}
+
+Napi::Value _loadFile(const Napi::CallbackInfo& info) {
+    auto env = info.Env();
+    std::string path = (info.Length() >= 1 && info[0].IsString())
+                           ? info[0].As<Napi::String>().Utf8Value()
+                           : "";
+    size_t before = app().console.lines().size();
+    std::string content, name;
+    bool ok = onyx::fileio::loadScript(path, content, name);
+    if (ok)
+        app().console.log("Loaded " + path + ".");
+    else
+        app().console.log("Failed to read file.", "#3A3A3A");
+    auto result = buildResult(env, before);
+    result.Set("ok", Napi::Boolean::New(env, ok));
+    result.Set("content", Napi::String::New(env, content));
+    result.Set("name", Napi::String::New(env, name));
+    return result;
+}
+
+Napi::Value _saveFile(const Napi::CallbackInfo& info) {
+    auto env = info.Env();
+    std::string path = (info.Length() >= 1 && info[0].IsString())
+                           ? info[0].As<Napi::String>().Utf8Value()
+                           : "";
+    std::string content = (info.Length() >= 2 && info[1].IsString())
+                              ? info[1].As<Napi::String>().Utf8Value()
+                              : "";
+    size_t before = app().console.lines().size();
+    bool ok = onyx::fileio::saveScript(path, content);
+    if (ok)
+        app().console.log("Script saved to " + path + ".");
+    else
+        app().console.log("Failed to save file.", "#3A3A3A");
+    auto result = buildResult(env, before);
+    result.Set("ok", Napi::Boolean::New(env, ok));
+    return result;
+}
+
+Napi::Value _getConsole(const Napi::CallbackInfo& info) {
+    auto env = info.Env();
+    const auto& lines = app().console.lines();
+    auto arr = Napi::Array::New(env, lines.size());
+    for (size_t i = 0; i < lines.size(); ++i) {
+        auto obj = Napi::Object::New(env);
+        obj.Set("text", Napi::String::New(env, lines[i].text));
+        obj.Set("color", Napi::String::New(env, lines[i].color));
+        arr.Set(i, obj);
+    }
+    return arr;
+}
+
+Napi::Value _clearConsole(const Napi::CallbackInfo& info) {
+    app().console.clear();
+    return info.Env().Undefined();
+}
+
+}  // namespace
+
+Napi::Object InitModule(Napi::Env env, Napi::Object exports) {
+    exports.Set("init", Napi::Function::New(env, _init));
+    exports.Set("attachToggle", Napi::Function::New(env, _attachToggle));
+    exports.Set("execute", Napi::Function::New(env, _execute));
+    exports.Set("loadFile", Napi::Function::New(env, _loadFile));
+    exports.Set("saveFile", Napi::Function::New(env, _saveFile));
+    exports.Set("getConsole", Napi::Function::New(env, _getConsole));
+    exports.Set("clearConsole", Napi::Function::New(env, _clearConsole));
+    return exports;
+}
+
+NODE_API_MODULE(onyx, InitModule)

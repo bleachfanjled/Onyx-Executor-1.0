@@ -1,0 +1,26 @@
+// =============================================================================
+// ONYX EXECUTOR — preload.js (macOS build)
+// Bridges IPC to the renderer:
+//   window.electronAPI.minimize() / .close()   -> window controls
+//     (on macOS the traffic lights handle these natively, but these are kept
+//      for any custom controls and platform detection)
+//   window.onyx.attachToggle() / execute() / loadFile() / saveFile()
+//     -> C++ backend (onyx.node) via main process IPC
+// =============================================================================
+
+const { contextBridge, ipcRenderer } = require("electron");
+
+contextBridge.exposeInMainWorld("electronAPI", {
+  platform: process.platform, // "darwin" on macOS
+  minimize: () => ipcRenderer.send("window-minimize"),
+  maximize: () => ipcRenderer.send("window-maximize"),
+  close: () => ipcRenderer.send("window-close"),
+});
+
+// C++ backend bridge — renderer calls these; main process forwards to onyx.node
+contextBridge.exposeInMainWorld("onyx", {
+  attachToggle: () => ipcRenderer.invoke("onyx:attach-toggle"),
+  execute: (script) => ipcRenderer.invoke("onyx:execute", script),
+  loadFile: () => ipcRenderer.invoke("onyx:load-file"),
+  saveFile: (content) => ipcRenderer.invoke("onyx:save-file", content),
+});

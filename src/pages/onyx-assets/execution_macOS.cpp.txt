@@ -1,0 +1,276 @@
+// =============================================================================
+// ONYX EXECUTOR — execution_macOS.cpp
+// Safe shell: editor state, tab management, file I/O, console buffer,
+// and attach/execute UI state. The actual process-injection call is stubbed.
+//
+// This file is platform-agnostic (standard C++ only) — it is identical to the
+// Windows execution.cpp. The macOS-specific work lives in integrity_check_macOS.cpp
+// and main_macOS.js. Wire attach/execute to your own private module if needed.
+// =============================================================================
+
+#include <iostream>
+#include <string>
+#include <vector>
+#include <fstream>
+#include <sstream>
+#include <algorithm>
+#include <memory>
+
+namespace onyx {
+
+// ---------------------------------------------------------------------------
+// Console buffer — mirrors log(msg, color) in renderer.js
+// ---------------------------------------------------------------------------
+struct ConsoleLine {
+    std::string text;
+    std::string color; // hex color, e.g. "#959595", "#FFFFFF", "#3A3A3A"
+};
+
+class ConsoleBuffer {
+public:
+    void log(const std::string& msg, const std::string& color = "#959595") {
+        lines_.push_back({ "[ ONYX ] " + msg, color });
+        std::cout << "[ ONYX ] " << msg << "\n";
+    }
+
+    void clear() { lines_.clear(); }
+
+    const std::vector<ConsoleLine>& lines() const { return lines_; }
+
+private:
+    std::vector<ConsoleLine> lines_;
+};
+
+// ---------------------------------------------------------------------------
+// Tab — mirrors the tab objects in renderer.js state.tabs
+// ---------------------------------------------------------------------------
+struct Tab {
+    std::string id;
+    std::string name;
+    std::string content;
+};
+
+class TabManager {
+public:
+    TabManager() {
+        tabs_.push_back({ generateId(), "New Script", "" });
+        selectedId_ = tabs_.front().id;
+    }
+
+    const std::vector<Tab>& tabs() const { return tabs_; }
+
+    Tab* activeTab() {
+        for (auto& tab : tabs_)
+            if (tab.id == selectedId_) return &tab;
+        return tabs_.empty() ? nullptr : &tabs_.front();
+    }
+
+    void selectTab(const std::string& id) {
+        selectedId_ = id;
+    }
+
+    Tab& newTab() {
+        tabs_.push_back({ generateId(), "New Script", "" });
+        selectedId_ = tabs_.back().id;
+        return tabs_.back();
+    }
+
+    void closeTab(const std::string& id) {
+        if (tabs_.size() == 1) {
+            auto& tab = tabs_.front();
+            tab.content.clear();
+            tab.name = "New Script";
+            return;
+        }
+        tabs_.erase(std::remove_if(tabs_.begin(), tabs_.end(),
+            [&](const Tab& t) { return t.id == id; }), tabs_.end());
+        selectedId_ = tabs_.front().id;
+    }
+
+    void renameTab(const std::string& id, const std::string& name) {
+        for (auto& tab : tabs_)
+            if (tab.id == id && !name.empty()) tab.name = name;
+    }
+
+    void saveActiveContent(const std::string& content) {
+        auto* tab = activeTab();
+        if (tab) tab->content = content;
+    }
+
+private:
+    std::string generateId() {
+        static int counter = 0;
+        return "tab_" + std::to_string(++counter);
+    }
+
+    std::vector<Tab> tabs_;
+    std::string selectedId_;
+};
+
+// ---------------------------------------------------------------------------
+// Status indicator — mirrors setStatus(text, active) in renderer.js
+// ---------------------------------------------------------------------------
+struct Status {
+    std::string text = "Idle";
+    bool active = false;
+};
+
+// ---------------------------------------------------------------------------
+// File I/O — mirrors handleLoad / handleDownload in renderer.js
+// ---------------------------------------------------------------------------
+namespace fileio {
+    bool loadScript(const std::string& path, std::string& outContent, std::string& outName) {
+        std::ifstream file(path);
+        if (!file.is_open()) return false;
+        std::stringstream ss;
+        ss << file.rdbuf();
+        outContent = ss.str();
+        // strip extension for the tab name
+        size_t slash = path.find_last_of("/\\");
+        std::string base = (slash == std::string::npos) ? path : path.substr(slash + 1);
+        size_t dot = base.find_last_of('.');
+        outName = (dot == std::string::npos) ? base : base.substr(0, dot);
+        return true;
+    }
+
+    bool saveScript(const std::string& path, const std::string& content) {
+        std::ofstream file(path);
+        if (!file.is_open()) return false;
+        file << content;
+        return true;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Attach state — mirrors handleAttachToggle() in renderer.js
+// The actual process-attach logic is NOT here. Wire it to your own module.
+// ---------------------------------------------------------------------------
+class AttachState {
+public:
+    bool isAttached() const { return attached_; }
+
+    // Called by the Attach button handler. Returns true if the UI should
+    // show "Attached", false if it should show "Idle".
+    // TODO: Replace the stub with a call to your own injection module.
+    bool toggle() {
+        attached_ = !attached_;
+        return attached_;
+    }
+
+private:
+    bool attached_ = false;
+};
+
+// ---------------------------------------------------------------------------
+// Execution pipeline — mirrors handleExecute() in renderer.js
+// Preconditions (already checked by caller):
+//   - script is non-empty
+//   - client is attached
+// The actual script-injection call is NOT here. Wire it to your own module.
+// ---------------------------------------------------------------------------
+namespace execution {
+    enum class Result {
+        Success,
+        NotAttached,
+        EmptyScript,
+        NotImplemented
+    };
+
+    // TODO: Replace the stub with a call to your own injection module.
+    Result execute(const std::string& script, bool attached) {
+        if (script.empty()) return Result::EmptyScript;
+        if (!attached) return Result::NotAttached;
+        return Result::NotImplemented;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Application shell — ties the pieces together, mirrors renderer.js flow
+// ---------------------------------------------------------------------------
+class ExecutorApp {
+public:
+    ConsoleBuffer console;
+    TabManager tabs;
+    Status status;
+    AttachState attach;
+
+    void handleAttachToggle() {
+        bool nowAttached = attach.toggle();
+        if (nowAttached) {
+            console.log("Roblox Client Attached", "#FFFFFF");
+            status.text = "Attached";
+            status.active = true;
+        } else {
+            console.log("Roblox Processes Terminated", "#FFFFFF");
+            status.text = "Idle";
+            status.active = false;
+        }
+    }
+
+    void handleExecute(const std::string& script) {
+        if (script.empty()) {
+            console.log("No script to execute.", "#3A3A3A");
+            return;
+        }
+        if (!attach.isAttached()) {
+            console.log("Attach to Roblox before executing.", "#FFFFFF");
+            return;
+        }
+        auto result = execution::execute(script, attach.isAttached());
+        switch (result) {
+            case execution::Result::Success:
+                console.log("Script executed.", "#FFFFFF");
+                break;
+            case execution::Result::NotImplemented:
+                console.log("Execution not implemented.", "#3A3A3A");
+                break;
+            default:
+                console.log("Execution failed.", "#3A3A3A");
+                break;
+        }
+    }
+
+    void handleCopy() {
+        auto* tab = tabs.activeTab();
+        if (!tab || tab->content.empty()) {
+            console.log("Nothing to copy.", "#3A3A3A");
+            return;
+        }
+        console.log("Script copied to clipboard.");
+    }
+
+    void handleClear() {
+        auto* tab = tabs.activeTab();
+        if (tab) tab->content.clear();
+        console.log("Editor cleared.");
+    }
+
+    void handleLoad(const std::string& path) {
+        std::string content, name;
+        if (!fileio::loadScript(path, content, name)) {
+            console.log("Failed to read file.", "#3A3A3A");
+            return;
+        }
+        tabs.saveActiveContent(content);
+        auto* tab = tabs.activeTab();
+        if (tab) {
+            tab->content = content;
+            tab->name = name.empty() ? "Loaded Script" : name;
+        }
+        console.log("Loaded " + path + ".");
+    }
+
+    void handleSave(const std::string& path) {
+        auto* tab = tabs.activeTab();
+        if (!tab || tab->content.empty()) {
+            console.log("Nothing to save.", "#3A3A3A");
+            return;
+        }
+        if (fileio::saveScript(path, tab->content))
+            console.log("Script saved to " + path + ".");
+        else
+            console.log("Failed to save file.", "#3A3A3A");
+    }
+};
+
+} // namespace onyx

@@ -1,0 +1,387 @@
+// renderer_macOS.js — UI logic for Onyx Executor (macOS build)
+//
+// Identical UI behavior to renderer.js. The Windows-only sample injection
+// payload has been removed; the editor starts empty. All attach/execute
+// calls route through window.onyx (the C++ addon) if built, otherwise the
+// local JS fallback keeps the UI functional.
+
+const editor = document.getElementById("scriptEditor");
+const consoleEl = document.getElementById("console");
+const statusDot = document.getElementById("statusDot");
+const statusText = document.getElementById("statusText");
+const attachButton = document.getElementById("attachButton");
+const tabsEl = document.getElementById("tabs");
+const newTabButton = document.getElementById("newTabButton");
+const contextMenu = document.getElementById("contextMenu");
+const toast = document.getElementById("toast");
+
+let clientAttached = false;
+let selectedTabId = null;
+let contextTabId = null;
+
+const state = {
+  tabs: [
+    { id: crypto.randomUUID(), name: "New Script", content: "" }
+  ],
+};
+
+function appendConsoleLine(text, color = "#959595") {
+  const line = document.createElement("p");
+  line.className = "text-[11px]";
+  line.style.color = color;
+  line.textContent = text;
+  consoleEl.appendChild(line);
+  consoleEl.scrollTop = consoleEl.scrollHeight;
+}
+
+function log(msg, color = "#959595") {
+  appendConsoleLine("[ ONYX ] " + msg, color);
+}
+
+// Apply a result returned from the C++ backend: append its console lines,
+// update status, and sync the attach button.
+function applyBackendResult(res) {
+  if (!res) return;
+  if (Array.isArray(res.lines)) {
+    res.lines.forEach((l) => appendConsoleLine(l.text, l.color || "#959595"));
+  }
+  if (res.status) setStatus(res.status.text, res.status.active);
+  if (typeof res.attached === "boolean") {
+    clientAttached = res.attached;
+    syncAttachButton();
+  }
+}
+
+function showNotification(msg) {
+  toast.textContent = msg;
+  toast.classList.remove("hidden");
+  toast.classList.remove("visible");
+  void toast.offsetWidth;
+  toast.classList.add("visible");
+
+  clearTimeout(showNotification.timeoutId);
+  showNotification.timeoutId = setTimeout(() => {
+    toast.classList.remove("visible");
+    toast.classList.add("hidden");
+  }, 1800);
+}
+
+function setStatus(text, active = false) {
+  statusText.textContent = text;
+  statusDot.style.backgroundColor = active ? "#FFFFFF" : "#3A3A3A";
+}
+
+function syncAttachButton() {
+  if (!attachButton) return;
+  attachButton.textContent = clientAttached ? "Kill Roblox" : "Attach";
+  attachButton.classList.toggle("bg-[#FF3B30]", clientAttached);
+  attachButton.classList.toggle("text-black", clientAttached);
+  attachButton.classList.toggle("text-[#959595]", !clientAttached);
+  attachButton.classList.toggle("border-[#FF3B30]", clientAttached);
+  attachButton.classList.toggle("hover:bg-[#FF5A4F]", clientAttached);
+  attachButton.classList.toggle("hover:text-white", clientAttached);
+}
+
+function getActiveTab() {
+  return state.tabs.find((tab) => tab.id === selectedTabId) || state.tabs[0];
+}
+
+function saveActiveTabContent() {
+  const activeTab = getActiveTab();
+  if (!activeTab) return;
+  activeTab.content = editor.value;
+}
+
+function renameTab(tabId) {
+  const tab = state.tabs.find((item) => item.id === tabId);
+  if (!tab) return;
+
+  saveActiveTabContent();
+  selectedTabId = tabId;
+  editor.value = tab.content;
+  renderTabs();
+
+  const tabWrap = tabsEl.querySelector(`[data-tab-id="${tabId}"]`);
+  if (!tabWrap) return;
+
+  const currentLabel = tabWrap.querySelector(".tab-label");
+  if (!currentLabel) return;
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = tab.name;
+  input.className = "tab-label w-[90px] bg-transparent border border-white px-2 text-[10px] uppercase tracking-widest text-white outline-none";
+  input.setAttribute("maxlength", "24");
+
+  const commitRename = () => {
+    const nextName = input.value.trim();
+    if (nextName) tab.name = nextName;
+    renderTabs();
+  };
+
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") commitRename();
+    if (event.key === "Escape") renderTabs();
+  });
+  input.addEventListener("blur", commitRename);
+
+  currentLabel.replaceWith(input);
+  input.focus();
+  input.select();
+}
+
+function renderTabs() {
+  tabsEl.innerHTML = "";
+
+  state.tabs.forEach((tab) => {
+    const tabWrap = document.createElement("div");
+    tabWrap.dataset.tabId = tab.id;
+    tabWrap.className = "flex items-center h-7 border transition-all " + (
+      selectedTabId === tab.id
+        ? "border-white bg-[#0F0F0F] text-white"
+        : "border-[#1A1A1A] text-[#959595] hover:border-[#3A3A3A] hover:text-white"
+    );
+
+    const tabBtn = document.createElement("button");
+    tabBtn.type = "button";
+    tabBtn.dataset.id = tab.id;
+    tabBtn.className = "tab-label px-3 text-[10px] uppercase tracking-widest whitespace-nowrap";
+    tabBtn.textContent = tab.name;
+    tabBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      saveActiveTabContent();
+      selectedTabId = tab.id;
+      editor.value = tab.content;
+      renderTabs();
+    });
+    tabBtn.addEventListener("dblclick", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      renameTab(tab.id);
+    });
+    tabBtn.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      contextTabId = tab.id;
+      contextMenu.classList.remove("hidden");
+      contextMenu.style.left = `${event.clientX}px`;
+      contextMenu.style.top = `${event.clientY}px`;
+    });
+
+    const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.textContent = "×";
+    closeBtn.className = "w-6 h-full text-[12px] border-l border-[#1A1A1A] text-[#959595] hover:text-white hover:bg-[#1A1A1A]";
+    closeBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      closeTab(tab.id);
+    });
+
+    tabWrap.appendChild(tabBtn);
+    tabWrap.appendChild(closeBtn);
+    tabsEl.appendChild(tabWrap);
+  });
+
+  const addButton = document.createElement("button");
+  addButton.type = "button";
+  addButton.textContent = "+";
+  addButton.className = "h-7 w-7 border border-[#1A1A1A] text-[#959595] hover:text-white hover:border-[#3A3A3A] transition-all";
+  addButton.addEventListener("click", () => {
+    saveActiveTabContent();
+    const newTab = { id: crypto.randomUUID(), name: "New Script", content: "" };
+    state.tabs.push(newTab);
+    selectedTabId = newTab.id;
+    editor.value = newTab.content;
+    renderTabs();
+  });
+  tabsEl.appendChild(addButton);
+}
+
+function closeTab(tabId) {
+  if (state.tabs.length === 1) {
+    const tab = getActiveTab();
+    tab.content = "";
+    tab.name = "New Script";
+    editor.value = "";
+    renderTabs();
+    return;
+  }
+
+  state.tabs = state.tabs.filter((tab) => tab.id !== tabId);
+  selectedTabId = state.tabs[0].id;
+  editor.value = getActiveTab().content;
+  renderTabs();
+}
+
+async function handleAttachToggle() {
+  const res = window.onyx ? await window.onyx.attachToggle() : null;
+  if (res) {
+    applyBackendResult(res);
+    showNotification(res.attached ? "Roblox Client Attached" : "Roblox Processes Terminated");
+    return;
+  }
+  // Fallback (native backend not built yet): toggle locally so the UI still works.
+  clientAttached = !clientAttached;
+  log(clientAttached ? "Roblox Client Attached" : "Roblox Processes Terminated", "#FFFFFF");
+  setStatus(clientAttached ? "Attached" : "Idle", clientAttached);
+  showNotification(clientAttached ? "Roblox Client Attached" : "Roblox Processes Terminated");
+  syncAttachButton();
+}
+
+async function handleExecute() {
+  const script = editor.value.trim();
+  if (!script) {
+    log("No script to execute.", "#3A3A3A");
+    showNotification("No script to execute.");
+    return;
+  }
+
+  if (window.onyx) {
+    const res = await window.onyx.execute(script);
+    if (res) {
+      applyBackendResult(res);
+      return;
+    }
+  }
+
+  // Fallback (native backend not built): local checks only.
+  if (!clientAttached) {
+    log("Attach to Roblox before executing.", "#FFFFFF");
+    showNotification("Attach to Roblox before executing.");
+    return;
+  }
+  log("Execution not implemented.", "#3A3A3A");
+  showNotification("Execution not implemented.");
+}
+
+function handleCopy() {
+  const script = editor.value;
+  if (!script) { log("Nothing to copy.", "#3A3A3A"); return; }
+  navigator.clipboard.writeText(script).then(() => log("Script copied to clipboard."));
+}
+
+async function handlePaste() {
+  try {
+    const text = await navigator.clipboard.readText();
+    editor.value += text;
+    saveActiveTabContent();
+    log("Pasted from clipboard.");
+  } catch {
+    log("Clipboard access denied.", "#3A3A3A");
+  }
+}
+
+async function handleDownload() {
+  const script = editor.value;
+  if (!script) { log("Nothing to save.", "#3A3A3A"); return; }
+  if (window.onyx) {
+    const res = await window.onyx.saveFile(script);
+    if (res) {
+      applyBackendResult(res);
+      if (res.ok) showNotification("Script saved.");
+      return;
+    }
+  }
+  // Fallback: browser download
+  const blob = new Blob([script], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "onyx_script.lua";
+  a.click();
+  URL.revokeObjectURL(url);
+  log("Script saved as onyx_script.lua.");
+}
+
+async function handleLoad() {
+  if (window.onyx) {
+    const res = await window.onyx.loadFile();
+    if (res) {
+      applyBackendResult(res);
+      if (res.ok) {
+        saveActiveTabContent();
+        const activeTab = getActiveTab();
+        if (activeTab) {
+          activeTab.content = res.content || "";
+          activeTab.name = res.name || "Loaded Script";
+          editor.value = activeTab.content;
+          renderTabs();
+          showNotification(`Loaded ${res.name || "script"}`);
+        }
+      }
+      return;
+    }
+  }
+  // Fallback: browser file picker
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".lua,.txt,.luac";
+  input.addEventListener("change", (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      saveActiveTabContent();
+      const activeTab = getActiveTab();
+      if (!activeTab) return;
+      activeTab.content = String(e.target.result || "");
+      activeTab.name = file.name.replace(/\.[^.]+$/, "") || "Loaded Script";
+      editor.value = activeTab.content;
+      renderTabs();
+      log(`Loaded ${file.name}.`);
+      showNotification(`Loaded ${file.name}`);
+    };
+    reader.onerror = () => log("Failed to read file.", "#3A3A3A");
+    reader.readAsText(file);
+  });
+  input.click();
+}
+
+function handleClear() {
+  editor.value = "";
+  saveActiveTabContent();
+  log("Editor cleared.");
+}
+
+editor.addEventListener("input", () => {
+  const activeTab = getActiveTab();
+  if (activeTab) activeTab.content = editor.value;
+});
+
+newTabButton.addEventListener("click", () => {
+  saveActiveTabContent();
+  const newTab = { id: crypto.randomUUID(), name: "New Script", content: "" };
+  state.tabs.push(newTab);
+  selectedTabId = newTab.id;
+  editor.value = newTab.content;
+  renderTabs();
+});
+
+contextMenu.addEventListener("click", (event) => {
+  const target = event.target.closest("[data-action]");
+  const action = target && target.dataset.action;
+  if (!contextTabId) return;
+
+  if (action === "rename") {
+    renameTab(contextTabId);
+  }
+
+  if (action === "close") {
+    closeTab(contextTabId);
+  }
+
+  contextMenu.classList.add("hidden");
+});
+
+document.addEventListener("click", (event) => {
+  if (!contextMenu.contains(event.target)) {
+    contextMenu.classList.add("hidden");
+  }
+});
+
+selectedTabId = state.tabs[0].id;
+editor.value = state.tabs[0].content;
+renderTabs();
+syncAttachButton();

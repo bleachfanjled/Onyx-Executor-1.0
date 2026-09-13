@@ -91,17 +91,35 @@ ipcMain.on("window-maximize", () => {
 // in the main process via Node, so it works even without the native addon built.
 ipcMain.handle("onyx:attach-toggle", (_e, currentlyAttached) => {
   if (currentlyAttached) {
-    // Kill Roblox: terminate the Roblox player + app processes (graceful SIGTERM).
+    // Force-quit Roblox: enumerate running processes whose name matches "Roblox"
+    // (launcher "Roblox", game client "RobloxPlayer", helpers) and terminate them.
+    // This is a macOS Force Quit — it lists processes by name and sends a signal;
+    // it does NOT read Roblox memory or inject into it.
+    let killed = 0;
     try {
-      execSync(
-        'killall RobloxPlayer 2>/dev/null; killall Roblox 2>/dev/null; pkill -f "Roblox.app/Contents/MacOS" 2>/dev/null; true',
-        { stdio: "ignore" }
-      );
+      const out = execSync('pgrep -i "Roblox" 2>/dev/null || true', {
+        encoding: "utf8",
+      });
+      const pids = out
+        .split(/\s+/)
+        .map((s) => parseInt(s, 10))
+        .filter((p) => Number.isFinite(p) && p !== process.pid);
+      for (const pid of pids) {
+        try {
+          process.kill(pid, "SIGTERM");
+          killed++;
+        } catch (e) {
+          // Already gone or no permission — skip.
+        }
+      }
     } catch (err) {
-      // pkill/killall return non-zero when nothing matches — that's fine.
+      // pgrep unavailable or nothing matched — non-fatal.
     }
+    const msg = killed > 0
+      ? `Roblox Processes Terminated (${killed})`
+      : "No Roblox Process Found";
     return {
-      lines: [{ text: "[ ONYX ] Roblox Processes Terminated", color: "#FFFFFF" }],
+      lines: [{ text: "[ ONYX ] " + msg, color: "#FFFFFF" }],
       status: { text: "Idle", active: false },
       attached: false,
     };

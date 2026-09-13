@@ -77,10 +77,6 @@
         Copy
       </button>
 
-      <button onclick="handlePaste()" class="h-9 px-4 border border-white text-white text-[10px] uppercase tracking-widest hover:bg-white hover:text-black transition-all">
-        Paste
-      </button>
-
       <button onclick="handleLoad()" class="h-9 px-4 border border-white text-white text-[10px] uppercase tracking-widest hover:bg-white hover:text-black transition-all">
         Load
       </button>

@@ -55,9 +55,24 @@ export default function ScriptCard({ script }) {
           </p>
         )}
 
-        {script.tags && script.tags.length > 0 && (
+        {((script.is_free || script.is_key_system || script.is_universal) || (script.tags && script.tags.length > 0)) && (
           <div className="flex flex-wrap gap-2 mb-3">
-            {script.tags.map((t, i) => (
+            {script.is_free && (
+              <span className="font-mono text-xs" style={{ color: "#FFFFFF", border: "1px solid #FFFFFF", padding: "2px 8px", letterSpacing: "0.08em", backgroundColor: "#0D0D0D" }}>
+                FREE
+              </span>
+            )}
+            {script.is_key_system && (
+              <span className="font-mono text-xs" style={{ color: "#959595", border: "1px solid #1A1A1A", padding: "2px 8px", letterSpacing: "0.08em" }}>
+                KEY SYSTEM
+              </span>
+            )}
+            {script.is_universal && (
+              <span className="font-mono text-xs" style={{ color: "#959595", border: "1px solid #1A1A1A", padding: "2px 8px", letterSpacing: "0.08em" }}>
+                UNIVERSAL
+              </span>
+            )}
+            {script.tags && script.tags.map((t, i) => (
               <span
                 key={i}
                 className="font-mono text-xs"

@@ -20,6 +20,18 @@
         "type": "string"
       }
     },
+    "is_free": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_key_system": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_universal": {
+      "type": "boolean",
+      "default": false
+    },
     "safety_status": {
       "type": "string",
       "enum": [

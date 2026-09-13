@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ShieldCheck, Search, Loader2, Upload } from "lucide-react";
+import { ShieldCheck, Search, Loader2, Upload, Check } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
 const STATUS = {
@@ -37,6 +37,7 @@ export default function ScriptCreator({ onPublished }) {
   const [scanning, setScanning] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState("");
+  const [attrs, setAttrs] = useState({ isFree: false, isKeySystem: false, isUniversal: false });
 
   const handleScan = async () => {
     if (!code.trim() || scanning) return;
@@ -69,6 +70,9 @@ export default function ScriptCreator({ onPublished }) {
         code,
         author_name: author.trim() || "Anonymous",
         tags: tagArray,
+        is_free: attrs.isFree,
+        is_key_system: attrs.isKeySystem,
+        is_universal: attrs.isUniversal,
         safety_status: "pending",
         safety_score: 0,
         findings: [],
@@ -79,6 +83,7 @@ export default function ScriptCreator({ onPublished }) {
       setTags("");
       setCode("");
       setScan(null);
+      setAttrs({ isFree: false, isKeySystem: false, isUniversal: false });
       if (onPublished) onPublished();
     } catch (e) {
       setError(e.message || "Failed to publish. You may need to sign in.");
@@ -142,6 +147,45 @@ export default function ScriptCreator({ onPublished }) {
             onChange={(e) => setTags(e.target.value)}
             placeholder="fun, gui, utility"
           />
+        </div>
+
+        {/* attribute toggles */}
+        <div>
+          <label style={labelStyle}>ATTRIBUTES</label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              { key: "isFree", label: "FREE", hint: "No paid key required" },
+              { key: "isKeySystem", label: "KEY SYSTEM", hint: "Requires a key to use" },
+              { key: "isUniversal", label: "UNIVERSAL", hint: "Works on any game" },
+            ].map((t) => {
+              const active = attrs[t.key];
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setAttrs((p) => ({ ...p, [t.key]: !p[t.key] }))}
+                  className="text-left transition-sharp"
+                  style={{
+                    border: active ? "1px solid #FFFFFF" : "1px solid #1A1A1A",
+                    backgroundColor: active ? "#0D0D0D" : "#050505",
+                    padding: "12px 14px",
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-mono text-xs" style={{ color: active ? "#FFFFFF" : "#959595", letterSpacing: "0.1em" }}>
+                      {t.label}
+                    </span>
+                    <span className="flex items-center justify-center" style={{ width: "14px", height: "14px", border: active ? "1px solid #FFFFFF" : "1px solid #3A3A3A", backgroundColor: active ? "#FFFFFF" : "transparent" }}>
+                      {active && <Check size={10} style={{ color: "#050505" }} />}
+                    </span>
+                  </div>
+                  <p className="font-mono text-xs" style={{ color: "#3A3A3A", letterSpacing: "0.02em" }}>
+                    {t.hint}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* code */}

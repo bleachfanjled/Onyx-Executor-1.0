@@ -15,6 +15,8 @@ export default function Scripts() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [showCreator, setShowCreator] = useState(true);
+  const [attrFilters, setAttrFilters] = useState({ isFree: false, isKeySystem: false, isUniversal: false });
+  const [sort, setSort] = useState("newest");
 
   const loadScripts = async () => {
     try {
@@ -40,7 +42,15 @@ export default function Scripts() {
     return unsubscribe;
   }, []);
 
-  const visible = filter === "all" ? scripts : scripts.filter((s) => s.safety_status === filter);
+  const visible = scripts
+    .filter((s) => filter === "all" || s.safety_status === filter)
+    .filter((s) => !attrFilters.isFree || s.is_free)
+    .filter((s) => !attrFilters.isKeySystem || s.is_key_system)
+    .filter((s) => !attrFilters.isUniversal || s.is_universal)
+    .sort((a, b) => {
+      if (sort === "score") return (b.safety_score || 0) - (a.safety_score || 0);
+      return new Date(b.created_date) - new Date(a.created_date);
+    });
 
   return (
     <div className="bg-obsidian min-h-screen" style={{ backgroundColor: "#050505", paddingTop: "56px" }}>
@@ -77,7 +87,11 @@ export default function Scripts() {
 
         {/* filters + list */}
         <div className="py-12">
-          <div className="flex items-center gap-3 mb-8 flex-wrap">
+          {/* safety status filters + sort */}
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <span className="font-mono text-xs" style={{ color: "#3A3A3A", letterSpacing: "0.12em" }}>
+              SAFETY
+            </span>
             {FILTERS.map((f) => (
               <button
                 key={f.value}
@@ -94,6 +108,60 @@ export default function Scripts() {
                 {f.label}
               </button>
             ))}
+            <div className="flex-1" />
+            <span className="font-mono text-xs" style={{ color: "#3A3A3A", letterSpacing: "0.12em" }}>
+              SORT
+            </span>
+            <div className="flex items-center" style={{ border: "1px solid #1A1A1A" }}>
+              {[
+                { value: "newest", label: "NEWEST" },
+                { value: "score", label: "SAFEST" },
+              ].map((o) => (
+                <button
+                  key={o.value}
+                  onClick={() => setSort(o.value)}
+                  className="font-mono text-xs uppercase transition-sharp"
+                  style={{
+                    color: sort === o.value ? "#FFFFFF" : "#959595",
+                    backgroundColor: sort === o.value ? "#0D0D0D" : "transparent",
+                    padding: "6px 12px",
+                    letterSpacing: "0.1em",
+                  }}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* attribute filters */}
+          <div className="flex items-center gap-3 mb-8 flex-wrap">
+            <span className="font-mono text-xs" style={{ color: "#3A3A3A", letterSpacing: "0.12em" }}>
+              TYPE
+            </span>
+            {[
+              { key: "isFree", label: "FREE" },
+              { key: "isKeySystem", label: "KEY SYSTEM" },
+              { key: "isUniversal", label: "UNIVERSAL" },
+            ].map((t) => {
+              const active = attrFilters[t.key];
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => setAttrFilters((p) => ({ ...p, [t.key]: !p[t.key] }))}
+                  className="font-mono text-xs uppercase transition-sharp"
+                  style={{
+                    color: active ? "#FFFFFF" : "#959595",
+                    border: active ? "1px solid #FFFFFF" : "1px solid #1A1A1A",
+                    padding: "6px 14px",
+                    letterSpacing: "0.1em",
+                    backgroundColor: active ? "#0D0D0D" : "transparent",
+                  }}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
           </div>
 
           {loading ? (

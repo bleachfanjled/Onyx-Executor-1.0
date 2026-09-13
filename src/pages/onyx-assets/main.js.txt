@@ -38,11 +38,17 @@ process.on("uncaughtException", (err) => {
 });
 
 function createWindow() {
+  // On macOS use a hidden title bar so the native traffic-light controls
+  // (close / minimize / maximize) remain available on the left inset.
+  // On Windows keep a frameless window with custom controls in the renderer.
+  const isMac = process.platform === "darwin";
   mainWindow = new BrowserWindow({
     width: 900,
     height: 620,
     resizable: true,
-    frame: false,
+    frame: !isMac,
+    titleBarStyle: isMac ? "hiddenInset" : "default",
+    trafficLightPosition: isMac ? { x: 12, y: 12 } : undefined,
     backgroundColor: "#050505",
     title: "Onyx",
     webPreferences: {
@@ -73,6 +79,12 @@ ipcMain.on("window-minimize", () => {
 
 ipcMain.on("window-close", () => {
   if (mainWindow) mainWindow.close();
+});
+
+ipcMain.on("window-maximize", () => {
+  if (!mainWindow) return;
+  if (mainWindow.isMaximized()) mainWindow.unmaximize();
+  else mainWindow.maximize();
 });
 
 // ---- C++ backend IPC (renderer -> main -> native addon) ----

@@ -219,8 +219,15 @@
           </div>
           <a href="https://github.com/bleachfanjled/Onyx-Executor-Windows/releases/tag/Onyx" target="_blank" class="premium-card flex items-center justify-between p-3 border border-[#1A1A1A]">
             <div>
-              <p class="text-white text-xs font-medium">Official GitHub</p>
+              <p class="text-white text-xs font-medium">Official GitHub For Windows</p>
               <p class="text-[#959595] text-[10px]">github.com/bleachfanjled/Onyx-Executor-Windows</p>
+            </div>
+            <span class="text-[#3A3A3A] text-[9px] uppercase tracking-widest">Verified</span>
+          </a>
+          <a href="https://github.com/bleachfanjled/Onyx-Executor-MacOS/releases/tag/Onyx" target="_blank" class="premium-card flex items-center justify-between p-3 border border-[#1A1A1A]">
+            <div>
+              <p class="text-white text-xs font-medium">Official GitHub For MacOS</p>
+              <p class="text-[#959595] text-[10px]">github.com/bleachfanjled/Onyx-Executor-MacOS</p>
             </div>
             <span class="text-[#3A3A3A] text-[9px] uppercase tracking-widest">Verified</span>
           </a>

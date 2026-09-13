@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Copy, Check, ChevronDown, ChevronUp, Star, Download } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
+import SignInPrompt from "@/components/scripts/SignInPrompt";
 
 const STATUS = {
   pending: { label: "PENDING", color: "#959595", dot: "#3A3A3A" },
@@ -35,9 +37,11 @@ function Stars({ value, size = 12, interactive = false, onRate, hover = 0, setHo
 }
 
 export default function ScriptCard({ script }) {
+  const { isAuthenticated, navigateToLogin } = useAuth();
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false);
   const [rated, setRated] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem(ratedKey(script.id))
   );
@@ -55,6 +59,7 @@ export default function ScriptCard({ script }) {
   };
 
   const download = () => {
+    if (!isAuthenticated) { setShowSignIn(true); return; }
     setDownloaded(true);
     base44.entities.Script.updateMany({ id: script.id }, { $inc: { downloads: 1 } }).catch(() => {});
     const blob = new Blob([script.code || ""], { type: "text/plain" });
@@ -69,6 +74,7 @@ export default function ScriptCard({ script }) {
   };
 
   const rate = (n) => {
+    if (!isAuthenticated) { setShowSignIn(true); return; }
     if (!interactive) return;
     localStorage.setItem(ratedKey(script.id), String(n));
     setRated(true);
@@ -238,6 +244,12 @@ export default function ScriptCard({ script }) {
           {script.code}
         </pre>
       )}
+
+      <SignInPrompt
+        open={showSignIn}
+        onClose={() => setShowSignIn(false)}
+        onSignIn={navigateToLogin}
+      />
     </div>
   );
 }

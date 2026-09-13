@@ -11,7 +11,6 @@ import Download from './pages/Download';
 import Changelog from './pages/Changelog';
 import Requirements from './pages/Requirements';
 import ExecutorPreview from './pages/ExecutorPreview';
-import Scripts from './pages/Scripts';
 
 function App() {
   return (
@@ -26,7 +25,6 @@ function App() {
               <Route path="/changelog" element={<Changelog />} />
               <Route path="/requirements" element={<Requirements />} />
               <Route path="/preview" element={<ExecutorPreview />} />
-              <Route path="/scripts" element={<Scripts />} />
             </Route>
             <Route path="*" element={<PageNotFound />} />
           </Routes>

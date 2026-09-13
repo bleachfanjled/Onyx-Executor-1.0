@@ -39,7 +39,7 @@ export default function Changelog() {
         {/* Page header */}
         <div className="py-16" style={{ borderBottom: "1px solid #1A1A1A" }}>
           <div className="flex items-center gap-6">
-            <span className="font-mono text-xs" style={{ color: "#3A3A3A", letterSpacing: "0.12em" }}>03 /</span>
+            <span className="font-mono text-xs" style={{ color: "#3A3A3A", letterSpacing: "0.12em" }}>04 /</span>
             <h1
               className="font-heading text-white"
               style={{ fontWeight: 800, fontSize: "clamp(24px, 4vw, 40px)", letterSpacing: "-0.04em" }}

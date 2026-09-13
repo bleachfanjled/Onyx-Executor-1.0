@@ -438,9 +438,12 @@ function initOnboarding() {
 
 function startVerification() {
   const steps = [
-    { text: "Initializing malware scan...", progress: 0.25 },
-    { text: "Scanning for threats...", progress: 0.50 },
-    { text: "Verifying file signatures...", progress: 0.75 },
+    { text: "Initializing malware scan...", progress: 0.12 },
+    { text: "Scanning for threats...", progress: 0.24 },
+    { text: "Verifying code signature...", progress: 0.40 },
+    { text: "Checking Team ID pin...", progress: 0.55 },
+    { text: "Verifying designated requirement...", progress: 0.70 },
+    { text: "Confirming signer identity...", progress: 0.85 },
   ];
   let i = 0;
   function next() {

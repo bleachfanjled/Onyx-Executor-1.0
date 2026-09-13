@@ -23,4 +23,6 @@ contextBridge.exposeInMainWorld("onyx", {
   execute: (script) => ipcRenderer.invoke("onyx:execute", script),
   loadFile: () => ipcRenderer.invoke("onyx:load-file"),
   saveFile: (content) => ipcRenderer.invoke("onyx:save-file", content),
+  verifyIntegrity: () => ipcRenderer.invoke("onyx:verify-integrity"),
+  verifyFile: (filePath) => ipcRenderer.invoke("onyx:verify-file", filePath),
 });

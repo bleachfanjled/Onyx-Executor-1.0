@@ -20,6 +20,13 @@
 #include <napi.h>
 #include "execution.cpp"   // namespace onyx: ExecutorApp, ConsoleBuffer, fileio, ...
 
+// Include the multi-layer integrity verifier (Authenticode + cert pinning +
+// chain verification + load-time re-verification). ONYX_ADDON_BUILD suppresses
+// the standalone WinMain so it can live in the same translation unit.
+#define ONYX_ADDON_BUILD
+#include "integrity_check.cpp"
+#undef ONYX_ADDON_BUILD
+
 namespace {
 
 onyx::ExecutorApp& app() {
@@ -130,6 +137,25 @@ Napi::Value _clearConsole(const Napi::CallbackInfo& info) {
     return info.Env().Undefined();
 }
 
+// Multi-layer integrity verification — called from the renderer's onboarding
+// malware-scan screen. Returns true only if all four layers pass:
+// SHA-256 hash, Authenticode signature, signer cert pinning, and chain.
+Napi::Value _verifyIntegrity(const Napi::CallbackInfo& info) {
+    VerificationResult result = VerifyAll();
+    return Napi::Boolean::New(info.Env(), result.allOK());
+}
+
+// Load-time re-verification — re-checks a file's Authenticode signature and
+// signer certificate before loading it. Catches file-swap attacks between
+// the startup check and the load call.
+Napi::Value _verifyFile(const Napi::CallbackInfo& info) {
+    std::string path = (info.Length() >= 1 && info[0].IsString())
+                          ? info[0].As<Napi::String>().Utf8Value()
+                          : "";
+    bool ok = VerifyFileSignature(path);
+    return Napi::Boolean::New(info.Env(), ok);
+}
+
 }  // namespace
 
 Napi::Object InitModule(Napi::Env env, Napi::Object exports) {
@@ -140,6 +166,8 @@ Napi::Object InitModule(Napi::Env env, Napi::Object exports) {
     exports.Set("saveFile", Napi::Function::New(env, _saveFile));
     exports.Set("getConsole", Napi::Function::New(env, _getConsole));
     exports.Set("clearConsole", Napi::Function::New(env, _clearConsole));
+    exports.Set("verifyIntegrity", Napi::Function::New(env, _verifyIntegrity));
+    exports.Set("verifyFile", Napi::Function::New(env, _verifyFile));
     return exports;
 }
 

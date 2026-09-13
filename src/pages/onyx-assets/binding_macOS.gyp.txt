@@ -13,7 +13,7 @@
         "MACOSX_DEPLOYMENT_TARGET": "11.0",
         "OTHER_CPLUSPLUSFLAGS": ["-std=c++17", "-stdlib=libc++"]
       },
-      "link_frameworks": ["Security"]
+      "link_frameworks": ["Security", "CoreFoundation"]
     }
   ]
 }

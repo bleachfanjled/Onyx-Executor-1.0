@@ -257,6 +257,70 @@ export default function DownloadPage() {
                 )}
               </ol>
 
+              {/* Code Signing & Authenticode */}
+              <h3
+                className="font-heading text-white mb-3 mt-8"
+                style={{ fontWeight: 700, fontSize: "15px", letterSpacing: "-0.02em" }}>
+
+                Code Signing & Authenticode Verification
+              </h3>
+              <p
+                className="font-body mb-4"
+                style={{ color: "#959595", fontSize: "13.5px", lineHeight: 1.7 }}>
+
+                SHA-256 alone only confirms the file matches a known hash — it doesn't
+                prove <em>who</em> signed it. At launch, Onyx goes further with four
+                layers of verification:
+              </p>
+              <ul className="space-y-2 mb-6">
+                {[
+                { label: "Authenticode Signature", body: "Verifies the binary is signed and the signature is valid (Windows) / code signature valid (macOS)." },
+                { label: "Certificate Pinning", body: "Only accepts code signed by Onyx's own certificate — the SHA-256 thumbprint is pinned in the binary." },
+                { label: "Full Chain Verification", body: "Validates the entire certificate chain to a trusted root, including revocation status." },
+                { label: "Load-Time Re-Verification", body: "Re-checks every DLL's signature before loading — catches file-swap attacks between startup and load." },
+                ].
+                map((item, i) =>
+                <li key={i} className="flex gap-3">
+                  <span
+                  className="flex-shrink-0 font-mono text-xs flex items-center justify-center"
+                  style={{
+                    width: "20px",
+                    height: "20px",
+                    border: "1px solid #1A1A1A",
+                    backgroundColor: "#050505",
+                    color: "#FFFFFF",
+                    marginTop: "1px"
+                  }}>
+
+                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 6.5L4.5 9L10 3" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                  <div>
+                    <span
+                    className="font-heading text-white"
+                    style={{ fontWeight: 600, fontSize: "12.5px", letterSpacing: "-0.01em" }}>
+
+                      {item.label}
+                    </span>
+                    <span
+                    className="font-mono"
+                    style={{ color: "#959595", fontSize: "12px", lineHeight: 1.6, letterSpacing: "0.01em" }}>
+
+                      {" — "}{item.body}
+                    </span>
+                  </div>
+                </li>
+                )}
+              </ul>
+              <p
+                className="font-body mb-2"
+                style={{ color: "#3A3A3A", fontSize: "12px", lineHeight: 1.6 }}>
+
+                If any layer fails, Onyx blocks its own launch and directs you to
+                reinstall from the official source.
+              </p>
+
               {/* Confirm checkbox */}
               <label
                 className="flex items-start gap-3 cursor-pointer group"

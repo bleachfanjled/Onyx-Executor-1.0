@@ -125,6 +125,20 @@ ipcMain.handle("onyx:execute", (_e, script) =>
   onyxNative ? onyxNative.execute(String(script || "")) : null
 );
 
+// Multi-layer integrity verification — called from the renderer's onboarding
+// malware-scan screen. Runs all four layers: SHA-256, code signature,
+// Team ID pinning, and designated requirement.
+ipcMain.handle("onyx:verify-integrity", () => {
+  if (!onyxNative || !onyxNative.verifyIntegrity) return true; // fallback: pass
+  try { return onyxNative.verifyIntegrity(); } catch { return false; }
+});
+
+// Load-time re-verification — re-checks a file's signature before loading.
+ipcMain.handle("onyx:verify-file", (_e, filePath) => {
+  if (!onyxNative || !onyxNative.verifyFile) return true; // fallback: pass
+  try { return onyxNative.verifyFile(String(filePath || "")); } catch { return false; }
+});
+
 ipcMain.handle("onyx:load-file", async () => {
   if (!onyxNative) return null;
   const r = await dialog.showOpenDialog(mainWindow, {

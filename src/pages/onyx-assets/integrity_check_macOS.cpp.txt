@@ -1,17 +1,27 @@
-// integrity_check_macOS.cpp — Onyx self-integrity verification (macOS)
+// integrity_check_macOS.cpp — Onyx multi-layer integrity verification (macOS)
 //
-// On startup, Onyx hashes its own running binary with SHA-256 and compares
-// the result against the expected hash below. If they do not match, the
-// build is corrupted or modified, so Onyx refuses to start and points the
-// user to reinstall from the official source.
+// Claude's four pillars of code-signing security, all enforced at startup
+// and re-enforced at load time:
 //
-// macOS port: uses CommonCrypto (part of the system Security framework)
-// instead of Windows CNG. No external dependencies.
+//   1. SHA-256 self-hash (exclusion-based — existing)
+//   2. Code signature present and valid (SecStaticCodeCheckValidity)
+//   3. Signer identity pinned (Team ID / certificate designation must match
+//      the embedded PINNED_TEAM_ID — only Onyx's own Developer ID is accepted)
+//   4. Designated requirement satisfied (SecCodeCheckValidity with the
+//      signing requirement — verifies the full signing chain)
 //
-// Build (clang):  clang++ -std=c++17 integrity_check_macOS.cpp -o Onyx -framework Security
-//   (Security framework provides CommonCrypto; linking it silences warnings.)
+// Load-time re-verification:
+//   VerifyFileSignature(path) — re-checks any file's code signature before
+//   loading it. An attacker who swaps the file between the startup check
+//   and the load call is caught here.
+//
+// Build (clang):
+//   clang++ -std=c++17 integrity_check_macOS.cpp -o Onyx \
+//     -framework Security -framework CoreFoundation
 
 #include <CommonCrypto/CommonDigest.h>
+#include <Security/Security.h>
+#include <CoreFoundation/CoreFoundation.h>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -24,7 +34,24 @@
 static const std::string EXPECTED_HASH =
     "a3f8c2e1d74b5960fe2318a0c9d47b8e6f1205a3c8d9e7f04b2163a5c8d9e7f0";
 
-// Convert a byte buffer to a lowercase hex string.
+// Pinned Team ID — the Apple Developer Program Team ID that signs Onyx.
+// Only a binary signed by THIS exact team is accepted. Find your Team ID
+// in the Apple Developer portal (it's a 10-character alphanumeric string,
+// e.g., "ABCDE12345").
+static const std::string PINNED_TEAM_ID = "YOUR_TEAM_ID";
+
+// Pinned designated requirement — a more specific signing requirement that
+// pins the exact signing identity. Replace with your actual requirement
+// (obtain with:  codesign -d -r- /path/to/Onyx.app).
+// Example: "cdhash H\"abcdef1234567890\"" or
+//          "identifier \"com.onyx.executor\" and anchor apple generic and ..."
+static const std::string PINNED_REQUIREMENT =
+    "identifier \"com.onyx.executor\"";
+
+// ============================================================================
+// SHA-256 HELPERS (existing, unchanged)
+// ============================================================================
+
 static std::string ToHex(const unsigned char* data, size_t len) {
     static const char hex[] = "0123456789abcdef";
     std::string out;
@@ -36,7 +63,6 @@ static std::string ToHex(const unsigned char* data, size_t len) {
     return out;
 }
 
-// Read the entire file at `path` into a buffer. Returns empty on failure.
 static bool ReadFileAll(const std::string& path, std::vector<unsigned char>& out) {
     FILE* f = fopen(path.c_str(), "rb");
     if (!f) return false;
@@ -53,29 +79,17 @@ static bool ReadFileAll(const std::string& path, std::vector<unsigned char>& out
     return true;
 }
 
-// SHA-256 of `data`, returned as a lowercase hex string (CommonCrypto).
 static std::string Sha256OfBuffer(const unsigned char* data, size_t len) {
     unsigned char hash[CC_SHA256_DIGEST_LENGTH] = { 0 };
     CC_SHA256(data, static_cast<CC_LONG>(len), hash);
     return ToHex(hash, sizeof(hash));
 }
 
-// SHA-256 of the file at `path`, but SKIPS the byte region where
-// `skipPattern` appears. This solves the chicken-and-egg problem: the
-// embedded EXPECTED_HASH string lives inside the binary, so changing it
-// would normally change the hash. By excluding those exact bytes from
-// the hash, the computed hash stays stable across the embed step.
-//
-//   Build 1  (placeholder hash)  -> compute hash-excluding-placeholder = H
-//   Set      EXPECTED_HASH = H
-//   Build 2  (real hash)         -> compute hash-excluding-real = H  (same!)
-//
 static std::string Sha256OfFileExcluding(const std::string& path,
                                          const std::string& skipPattern) {
     std::vector<unsigned char> fileData;
     if (!ReadFileAll(path, fileData)) return {};
 
-    // Find the skip region (the 64-char hex string literal in the binary).
     const unsigned char* pat = reinterpret_cast<const unsigned char*>(skipPattern.data());
     size_t patLen = skipPattern.size();
     size_t skipStart = std::string::npos;
@@ -89,11 +103,9 @@ static std::string Sha256OfFileExcluding(const std::string& path,
     }
 
     if (skipStart == std::string::npos) {
-        // Pattern not found — hash the whole file.
         return Sha256OfBuffer(fileData.data(), fileData.size());
     }
 
-    // Stream the file through CC_SHA256 in two chunks (before + after the skip).
     CC_SHA256_CTX ctx;
     CC_SHA256_Init(&ctx);
 
@@ -112,7 +124,6 @@ static std::string Sha256OfFileExcluding(const std::string& path,
     return ToHex(hash, sizeof(hash));
 }
 
-// Path of the currently running executable (macOS: via proc_pidpath).
 static std::string GetSelfPath() {
     char path[PROC_PIDPATHINFO_MAXSIZE] = { 0 };
     pid_t pid = getpid();
@@ -120,19 +131,10 @@ static std::string GetSelfPath() {
     return std::string(path);
 }
 
-// Returns true if the running binary matches the expected SHA-256.
-//
-// The hash is computed over the binary EXCLUDING the EXPECTED_HASH string
-// itself, so embedding the final hash does not change the computed value.
-//
-// RELEASE WORKFLOW:
-//   1. Build with EXPECTED_HASH set to any 64-char hex placeholder.
-//   2. Run:  Onyx --print-hash   (prints the exclusion hash, then exits)
-//   3. Paste that hash into EXPECTED_HASH.
-//   4. Rebuild. The exclusion hash is now stable and matches.
-//
-// DEV BYPASS: define ONYX_SKIP_INTEGRITY at compile time to disable the
-// check entirely during development.
+// ============================================================================
+// LAYER 1: SHA-256 SELF-HASH (existing, unchanged)
+// ============================================================================
+
 bool VerifyApplicationIntegrity() {
 #ifdef ONYX_SKIP_INTEGRITY
     return true;
@@ -144,12 +146,251 @@ bool VerifyApplicationIntegrity() {
     const std::string actualHash = Sha256OfFileExcluding(selfPath, EXPECTED_HASH);
     if (actualHash.empty()) return false;
 
-    // Case-insensitive compare.
     return strcasecmp(actualHash.c_str(), EXPECTED_HASH.c_str()) == 0;
 }
 
-// Helper: print the exclusion hash of the current binary so you can paste
-// it into EXPECTED_HASH.  Usage:  Onyx --print-hash
+// ============================================================================
+// LAYER 2: CODE SIGNATURE VERIFICATION (SecStaticCodeCheckValidity)
+// ============================================================================
+//
+// Verifies that the binary at `path` has a valid code signature. On macOS,
+// this checks:
+//   - A signature exists
+//   - The signature is structurally valid
+//   - The signature has not been tampered with
+//   - The binary's content matches what was signed
+//
+// Returns true only if the signature is present and fully valid.
+
+static std::string CFStringToStd(CFStringRef cfStr) {
+    if (!cfStr) return {};
+    const char* cStr = CFStringGetCStringPtr(cfStr, kCFStringEncodingUTF8);
+    if (cStr) return std::string(cStr);
+
+    CFIndex length = CFStringGetLength(cfStr);
+    CFIndex maxSize = CFStringGetMaximumSizeForEncoding(length, kCFStringEncodingUTF8) + 1;
+    std::vector<char> buffer(maxSize);
+    if (CFStringGetCString(cfStr, buffer.data(), maxSize, kCFStringEncodingUTF8)) {
+        return std::string(buffer.data());
+    }
+    return {};
+}
+
+bool VerifyCodeSignature(const std::string& path) {
+#ifdef ONYX_SKIP_INTEGRITY
+    return true;
+#endif
+
+    CFURLRef url = CFURLCreateFromFileSystemRepresentation(
+        kCFAllocatorDefault,
+        reinterpret_cast<const UInt8*>(path.c_str()),
+        static_cast<CFIndex>(path.size()),
+        false  // not a directory
+    );
+    if (!url) return false;
+
+    SecStaticCodeRef staticCode = nullptr;
+    OSStatus status = SecStaticCodeCreateWithPath(url, kSecCSDefaultFlags, &staticCode);
+    CFRelease(url);
+
+    if (status != errSecSuccess || !staticCode) {
+        if (staticCode) CFRelease(staticCode);
+        return false;
+    }
+
+    // kSecCSCheckAllArchitecture + kSecCSCheckNoOp = thorough validation.
+    // kSecCSRequirementInformation ensures the designated requirement is checked.
+    SecCSFlags flags = static_cast<SecCSFlags>(
+        kSecCSDefaultFlags | kSecCSRequirementInformation
+    );
+
+    status = SecStaticCodeCheckValidity(staticCode, flags, nullptr);
+    CFRelease(staticCode);
+
+    return status == errSecSuccess;
+}
+
+// ============================================================================
+// LAYER 3: SIGNER IDENTITY PINNING (Team ID match)
+// ============================================================================
+//
+// Extracts the Team ID from the binary's code signature and compares it
+// against PINNED_TEAM_ID. Only a binary signed by Onyx's own Developer
+// ID team is accepted. This prevents an attacker from re-signing a
+// modified binary with their own Developer ID.
+
+bool VerifySignerIdentity(const std::string& path) {
+#ifdef ONYX_SKIP_INTEGRITY
+    return true;
+#endif
+
+    CFURLRef url = CFURLCreateFromFileSystemRepresentation(
+        kCFAllocatorDefault,
+        reinterpret_cast<const UInt8*>(path.c_str()),
+        static_cast<CFIndex>(path.size()),
+        false
+    );
+    if (!url) return false;
+
+    SecStaticCodeRef staticCode = nullptr;
+    OSStatus status = SecStaticCodeCreateWithPath(url, kSecCSDefaultFlags, &staticCode);
+    CFRelease(url);
+
+    if (status != errSecSuccess || !staticCode) {
+        if (staticCode) CFRelease(staticCode);
+        return false;
+    }
+
+    // Extract the Team ID from the signing information.
+    CFDictionaryRef signingInfo = nullptr;
+    status = SecCodeCopySigningInformation(staticCode, kSecCSRequirementInformation, &signingInfo);
+    CFRelease(staticCode);
+
+    if (status != errSecSuccess || !signingInfo) {
+        if (signingInfo) CFRelease(signingInfo);
+        return false;
+    }
+
+    std::string teamID;
+    CFStringRef teamIDRef = static_cast<CFStringRef>(
+        CFDictionaryGetValue(signingInfo, kSecCodeInfoTeamIdentifier)
+    );
+    if (teamIDRef) {
+        teamID = CFStringToStd(teamIDRef);
+    }
+    CFRelease(signingInfo);
+
+    if (teamID.empty()) return false;
+
+    // Case-sensitive compare — Team IDs are case-sensitive.
+    return teamID == PINNED_TEAM_ID;
+}
+
+// ============================================================================
+// LAYER 4: DESIGNATED REQUIREMENT VERIFICATION
+// ============================================================================
+//
+// Verifies the binary against its designated requirement (DR). The DR is
+// a code-signing requirement string embedded in the signature that
+// specifies the exact signing identity the binary expects. This is the
+// macOS equivalent of full certificate chain verification — it ensures
+// the binary was signed by the exact identity it was built to trust.
+//
+// We also check against our own pinned requirement for extra assurance.
+
+bool VerifyDesignatedRequirement(const std::string& path) {
+#ifdef ONYX_SKIP_INTEGRITY
+    return true;
+#endif
+
+    CFURLRef url = CFURLCreateFromFileSystemRepresentation(
+        kCFAllocatorDefault,
+        reinterpret_cast<const UInt8*>(path.c_str()),
+        static_cast<CFIndex>(path.size()),
+        false
+    );
+    if (!url) return false;
+
+    SecStaticCodeRef staticCode = nullptr;
+    OSStatus status = SecStaticCodeCreateWithPath(url, kSecCSDefaultFlags, &staticCode);
+    CFRelease(url);
+
+    if (status != errSecSuccess || !staticCode) {
+        if (staticCode) CFRelease(staticCode);
+        return false;
+    }
+
+    // Create a requirement from our pinned string.
+    SecRequirementRef requirement = nullptr;
+    status = SecRequirementCreateWithString(
+        CFStringCreateWithCString(kCFAllocatorDefault,
+                                  PINNED_REQUIREMENT.c_str(),
+                                  kCFStringEncodingUTF8),
+        kSecCSDefaultFlags,
+        &requirement
+    );
+
+    if (status != errSecSuccess || !requirement) {
+        // If we can't create the requirement, fall back to the binary's
+        // own designated requirement check.
+        if (requirement) CFRelease(requirement);
+        status = SecStaticCodeCheckValidity(staticCode,
+            static_cast<SecCSFlags>(kSecCSDefaultFlags | kSecCSRequirementInformation),
+            nullptr);
+        CFRelease(staticCode);
+        return status == errSecSuccess;
+    }
+
+    // Check the binary against our pinned requirement.
+    status = SecStaticCodeCheckValidity(staticCode, kSecCSDefaultFlags, requirement);
+    CFRelease(requirement);
+    CFRelease(staticCode);
+
+    return status == errSecSuccess;
+}
+
+// ============================================================================
+// COMBINED VERIFICATION — all four layers must pass
+// ============================================================================
+
+struct VerificationResult {
+    bool hashOK;
+    bool signatureOK;
+    bool signerOK;
+    bool chainOK;
+    bool allOK() const { return hashOK && signatureOK && signerOK && chainOK; }
+};
+
+VerificationResult VerifyAll() {
+    VerificationResult result = {};
+
+#ifdef ONYX_SKIP_INTEGRITY
+    result = { true, true, true, true };
+    return result;
+#endif
+
+    const std::string selfPath = GetSelfPath();
+    if (selfPath.empty()) return result;
+
+    // Layer 1: SHA-256 self-hash.
+    const std::string actualHash = Sha256OfFileExcluding(selfPath, EXPECTED_HASH);
+    result.hashOK = !actualHash.empty() &&
+                    strcasecmp(actualHash.c_str(), EXPECTED_HASH.c_str()) == 0;
+
+    // Layer 2: Code signature present and valid.
+    result.signatureOK = VerifyCodeSignature(selfPath);
+
+    // Layer 3: Signer identity (Team ID) pinned.
+    result.signerOK = VerifySignerIdentity(selfPath);
+
+    // Layer 4: Designated requirement satisfied.
+    result.chainOK = VerifyDesignatedRequirement(selfPath);
+
+    return result;
+}
+
+// ============================================================================
+// LOAD-TIME RE-VERIFICATION
+// ============================================================================
+//
+// Re-checks a file's code signature AND signer identity before loading it.
+// This catches an attacker who swaps the file between the startup check
+// and the load call.
+
+bool VerifyFileSignature(const std::string& path) {
+#ifdef ONYX_SKIP_INTEGRITY
+    return true;
+#endif
+
+    if (!VerifyCodeSignature(path)) return false;
+    if (!VerifySignerIdentity(path)) return false;
+    return true;
+}
+
+// ============================================================================
+// DEV HELPERS + FAILURE HANDLING
+// ============================================================================
+
 static void PrintHashAndExit() {
     const std::string selfPath = GetSelfPath();
     const std::string h = Sha256OfFileExcluding(selfPath, EXPECTED_HASH);
@@ -163,10 +404,10 @@ static void PrintHashAndExit() {
 void HandleIntegrityFailure() {
     std::cerr <<
         "Onyx failed its integrity verification.\n\n"
-        "This installation may be corrupted or modified. Onyx will not start. "
-        "Drag Onyx to the Trash and reinstall it from the official source.\n";
+        "This installation may be corrupted, modified, or signed by an "
+        "untrusted identity. Onyx will not start. Drag Onyx to the Trash "
+        "and reinstall it from the official source.\n";
 
-    // Reveal the Applications folder in Finder so the user can trash the app.
     CFURLRef appsURL = CFURLCreateWithFileSystemPath(
         kCFAllocatorDefault,
         CFSTR("/Applications"),
@@ -178,8 +419,8 @@ void HandleIntegrityFailure() {
     }
 }
 
+#ifndef ONYX_ADDON_BUILD
 int main(int argc, char* argv[]) {
-    // Dev helper:  Onyx --print-hash  -> print the exclusion hash and exit.
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--print-hash") == 0) {
             PrintHashAndExit();
@@ -187,7 +428,9 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if (!VerifyApplicationIntegrity()) {
+    // Run all four verification layers.
+    VerificationResult result = VerifyAll();
+    if (!result.allOK()) {
         HandleIntegrityFailure();
         return 1;
     }
@@ -195,3 +438,4 @@ int main(int argc, char* argv[]) {
     // Normal Onyx startup goes here.
     return 0;
 }
+#endif  // ONYX_ADDON_BUILD

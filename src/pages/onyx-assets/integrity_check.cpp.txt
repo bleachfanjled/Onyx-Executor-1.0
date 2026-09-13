@@ -1,27 +1,55 @@
-// integrity_check.cpp — Onyx self-integrity verification
+// integrity_check.cpp — Onyx multi-layer integrity verification (Windows)
 //
-// On startup, Onyx hashes its own running .exe with SHA-256 and compares
-// the result against the expected hash below. If they do not match, the
-// build is corrupted or modified, so Onyx refuses to start and points the
-// user to reinstall from the official source.
+// Claude's four pillars of code-signing security, all enforced at startup
+// and re-enforced at load time:
 //
-// Build: link with bcrypt.lib
+//   1. SHA-256 self-hash (exclusion-based — existing)
+//   2. Authenticode signature present and valid (WinVerifyTrust)
+//   3. Signer certificate pinned (SHA-256 thumbprint of the leaf cert
+//      must match the embedded PINNED_CERT_THUMBPRINT — only Onyx's own
+//      key is accepted)
+//   4. Full certificate chain verified (CertGetCertificateChain + chain
+//      policy check — root, intermediates, and revocation)
+//
+// Load-time re-verification:
+//   VerifyFileSignature(path) — re-checks any DLL's signature AND signer
+//   cert before it is loaded. An attacker who swaps the file between the
+//   startup check and the load call is caught here.
+//
+// Build: link with bcrypt.lib crypt32.lib wintrust.lib
 
 #include <windows.h>
 #include <shellapi.h>
 #include <bcrypt.h>
+#include <wintrust.h>
+#include <softpub.h>
+#include <wincrypt.h>
 #include <iostream>
 #include <string>
 #include <vector>
 #include <cstring>
 
 #pragma comment(lib, "bcrypt.lib")
+#pragma comment(lib, "crypt32.lib")
+#pragma comment(lib, "wintrust.lib")
 
 // This must match the SHA-256 published on the Onyx download page.
 static const std::string EXPECTED_HASH =
     "a3f8c2e1d74b5960fe2318a0c9d47b8e6f1205a3c8d9e7f04b2163a5c8d9e7f0";
 
-// Convert a byte buffer to a lowercase hex string.
+// Pinned signer certificate thumbprint — the SHA-256 hash of the DER-encoded
+// leaf certificate. Only a binary signed by THIS exact certificate is
+// accepted. Replace with your actual Onyx code-signing certificate's
+// SHA-256 thumbprint (compute with:
+//   certutil -hashfile Onyx.exe SHA256
+// or extract from the signtool /v output during signing).
+static const std::string PINNED_CERT_THUMBPRINT_SHA256 =
+    "0000000000000000000000000000000000000000000000000000000000000000";
+
+// ============================================================================
+// SHA-256 HELPERS (existing, unchanged)
+// ============================================================================
+
 static std::string ToHex(const unsigned char* data, size_t len) {
     static const char hex[] = "0123456789abcdef";
     std::string out;
@@ -33,7 +61,6 @@ static std::string ToHex(const unsigned char* data, size_t len) {
     return out;
 }
 
-// Read the entire file at `path` into a buffer. Returns empty on failure.
 static bool ReadFileAll(const std::wstring& path, std::vector<BYTE>& out) {
     HANDLE hFile = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ,
                                nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
@@ -53,7 +80,6 @@ static bool ReadFileAll(const std::wstring& path, std::vector<BYTE>& out) {
     return true;
 }
 
-// SHA-256 of `data`, returned as a lowercase hex string.
 static std::string Sha256OfBuffer(const BYTE* data, size_t len) {
     BCRYPT_ALG_HANDLE hAlg = nullptr;
     if (BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_SHA256_ALGORITHM, nullptr, 0) != 0)
@@ -83,22 +109,13 @@ static std::string Sha256OfBuffer(const BYTE* data, size_t len) {
     return ToHex(hash, sizeof(hash));
 }
 
-// SHA-256 of the file at `path`, but SKIPS the byte region where
-// `skipPattern` appears. This solves the chicken-and-egg problem: the
-// embedded EXPECTED_HASH string lives inside the .exe, so changing it
-// would normally change the hash. By excluding those exact bytes from
-// the hash, the computed hash stays stable across the embed step.
-//
-//   Build 1  (placeholder hash)  -> compute hash-excluding-placeholder = H
-//   Set      EXPECTED_HASH = H
-//   Build 2  (real hash)         -> compute hash-excluding-real = H  (same!)
-//
+// SHA-256 of a file, SKIPPING the byte region where `skipPattern` appears.
+// This solves the chicken-and-egg problem of embedding the hash in the binary.
 static std::string Sha256OfFileExcluding(const std::wstring& path,
                                          const std::string& skipPattern) {
     std::vector<BYTE> fileData;
     if (!ReadFileAll(path, fileData)) return {};
 
-    // Find the skip region (the 64-char hex string literal in the binary).
     const BYTE* pat = reinterpret_cast<const BYTE*>(skipPattern.data());
     size_t patLen = skipPattern.size();
     size_t skipStart = std::string::npos;
@@ -112,11 +129,9 @@ static std::string Sha256OfFileExcluding(const std::wstring& path,
     }
 
     if (skipStart == std::string::npos) {
-        // Pattern not found — hash the whole file.
         return Sha256OfBuffer(fileData.data(), fileData.size());
     }
 
-    // Hash everything before the skip region.
     BCRYPT_ALG_HANDLE hAlg = nullptr;
     if (BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_SHA256_ALGORITHM, nullptr, 0) != 0)
         return {};
@@ -127,31 +142,23 @@ static std::string Sha256OfFileExcluding(const std::wstring& path,
         return {};
     }
 
-    // Before the skip region.
     if (skipStart > 0) {
         if (BCryptHashData(hHash, fileData.data(), static_cast<ULONG>(skipStart), 0) != 0) {
-            BCryptDestroyHash(hHash);
-            BCryptCloseAlgorithmProvider(hAlg, 0);
-            return {};
+            BCryptDestroyHash(hHash); BCryptCloseAlgorithmProvider(hAlg, 0); return {};
         }
     }
 
-    // After the skip region.
     size_t after = skipStart + patLen;
     if (after < fileData.size()) {
         if (BCryptHashData(hHash, fileData.data() + after,
                            static_cast<ULONG>(fileData.size() - after), 0) != 0) {
-            BCryptDestroyHash(hHash);
-            BCryptCloseAlgorithmProvider(hAlg, 0);
-            return {};
+            BCryptDestroyHash(hHash); BCryptCloseAlgorithmProvider(hAlg, 0); return {};
         }
     }
 
     BYTE hash[32] = { 0 };
     if (BCryptFinishHash(hHash, hash, sizeof(hash), 0) != 0) {
-        BCryptDestroyHash(hHash);
-        BCryptCloseAlgorithmProvider(hAlg, 0);
-        return {};
+        BCryptDestroyHash(hHash); BCryptCloseAlgorithmProvider(hAlg, 0); return {};
     }
 
     BCryptDestroyHash(hHash);
@@ -159,27 +166,16 @@ static std::string Sha256OfFileExcluding(const std::wstring& path,
     return ToHex(hash, sizeof(hash));
 }
 
-// Path of the currently running .exe.
 static std::wstring GetSelfPath() {
     wchar_t path[MAX_PATH] = { 0 };
     GetModuleFileNameW(nullptr, path, MAX_PATH);
     return std::wstring(path);
 }
 
-// Returns true if the running .exe matches the expected SHA-256.
-//
-// The hash is computed over the .exe EXCLUDING the EXPECTED_HASH string
-// itself, so embedding the final hash does not change the computed value.
-//
-// RELEASE WORKFLOW:
-//   1. Build the .exe with EXPECTED_HASH set to any 64-char hex placeholder.
-//   2. Run:  Onyx.exe --print-hash   (prints the exclusion hash, then exits)
-//      OR compute it externally with the helper below.
-//   3. Paste that hash into EXPECTED_HASH.
-//   4. Rebuild. The exclusion hash is now stable and matches.
-//
-// DEV BYPASS: define ONYX_SKIP_INTEGRITY at compile time to disable the
-// check entirely during development.
+// ============================================================================
+// LAYER 1: SHA-256 SELF-HASH (existing, unchanged)
+// ============================================================================
+
 bool VerifyApplicationIntegrity() {
 #ifdef ONYX_SKIP_INTEGRITY
     return true;
@@ -188,16 +184,325 @@ bool VerifyApplicationIntegrity() {
     const std::wstring selfPath = GetSelfPath();
     if (selfPath.empty()) return false;
 
-    // Hash the .exe, skipping the embedded EXPECTED_HASH string itself.
     const std::string actualHash = Sha256OfFileExcluding(selfPath, EXPECTED_HASH);
     if (actualHash.empty()) return false;
 
     return _stricmp(actualHash.c_str(), EXPECTED_HASH.c_str()) == 0;
 }
 
-// Helper entry point: pass --print-hash to compute and print the exclusion
-// hash of the current .exe, so you can paste it into EXPECTED_HASH.
-// Usage:  Onyx.exe --print-hash
+// ============================================================================
+// LAYER 2: AUTHENTICODE SIGNATURE VERIFICATION (WinVerifyTrust)
+// ============================================================================
+//
+// Verifies that the file at `path` has a valid Authenticode signature.
+// This checks:
+//   - A signature exists
+//   - The signature is structurally valid
+//   - The signing certificate chains to a trusted root
+//   - The certificate was valid at signing time
+//   - Revocation status (if network is available)
+//
+// Returns true only if the signature is present and fully valid.
+
+bool VerifyAuthenticodeSignature(const std::wstring& path) {
+#ifdef ONYX_SKIP_INTEGRITY
+    return true;
+#endif
+
+    WINTRUST_FILE_INFO fileInfo = {};
+    fileInfo.cbStruct = sizeof(WINTRUST_FILE_INFO);
+    fileInfo.pcwszFilePath = path.c_str();
+    fileInfo.hFile = nullptr;
+    fileInfo.pgKnownSubject = nullptr;
+
+    WINTRUST_DATA trustData = {};
+    trustData.cbStruct = sizeof(WINTRUST_DATA);
+    trustData.pPolicyCallbackData = nullptr;
+    trustData.pSIPClientData = nullptr;
+    trustData.dwUIChoice = WTD_UI_NONE;
+    trustData.fdwRevocationChecks = WTD_REVOKE_WHOLECHAIN;
+    trustData.dwUnionChoice = WTD_CHOICE_FILE;
+    trustData.pFile = &fileInfo;
+    trustData.dwStateAction = WTD_STATEACTION_VERIFY;
+    trustData.hWVTStateData = nullptr;
+    trustData.pwszURLReference = nullptr;
+    trustData.dwProvFlags = WTD_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT;
+    trustData.dwUIContext = 0;
+
+    // WINTRUST_ACTION_GENERIC_VERIFY_V2 = the Authenticode policy.
+    GUID policyGUID = WINTRUST_ACTION_GENERIC_VERIFY_V2;
+
+    LONG result = WinVerifyTrust(static_cast<HWND>(INVALID_HANDLE_VALUE),
+                                 &policyGUID, &trustData);
+
+    // Always close the state data to avoid leaks.
+    trustData.dwStateAction = WTD_STATEACTION_CLOSE;
+    WinVerifyTrust(static_cast<HWND>(INVALID_HANDLE_VALUE), &policyGUID, &trustData);
+
+    return result == 0;  // 0 = valid signature
+}
+
+// ============================================================================
+// LAYER 3: CERTIFICATE PINNING (signer cert SHA-256 thumbprint match)
+// ============================================================================
+//
+// Extracts the leaf (signer) certificate from the file's Authenticode
+// signature, computes its SHA-256 thumbprint, and compares it against
+// PINNED_CERT_THUMBPRINT_SHA256. Only a file signed by Onyx's own
+// private key (whose cert has this exact thumbprint) is accepted.
+//
+// This prevents an attacker from re-signing a modified binary with
+// their own certificate — even a valid, trusted certificate — because
+// the thumbprint won't match.
+
+// Helper: compute SHA-256 thumbprint of a certificate.
+static std::string CertSha256Thumbprint(PCCERT_CONTEXT pCert) {
+    if (!pCert) return {};
+
+    BYTE thumb[32] = { 0 };
+    DWORD thumbLen = sizeof(thumb);
+
+    // Use CRYPT_SHA256_ALGORITHM to hash the DER-encoded certificate.
+    HCRYPTPROV_OR_NCRYPT_KEY_HANDLE hProv = 0;
+    HCRYPTHASH hHash = 0;
+
+    if (!CryptAcquireContextW(&hProv, nullptr, nullptr, PROV_RSA_FULL,
+                              CRYPT_VERIFYCONTEXT)) {
+        return {};
+    }
+
+    if (!CryptCreateHash(hProv, CALG_SHA_256, 0, 0, &hHash)) {
+        CryptReleaseContext(hProv, 0);
+        return {};
+    }
+
+    if (!CryptHashData(hHash, pCert->pbCertEncoded, pCert->cbCertEncoded, 0)) {
+        CryptDestroyHash(hHash);
+        CryptReleaseContext(hProv, 0);
+        return {};
+    }
+
+    if (!CryptGetHashParam(hHash, HP_HASHVAL, thumb, &thumbLen, 0)) {
+        CryptDestroyHash(hHash);
+        CryptReleaseContext(hProv, 0);
+        return {};
+    }
+
+    CryptDestroyHash(hHash);
+    CryptReleaseContext(hProv, 0);
+
+    return ToHex(thumb, thumbLen);
+}
+
+// Extract the signer (leaf) certificate from a file's Authenticode signature.
+// Uses the WinTrust helper functions to walk the signature provider data.
+static PCCERT_CONTEXT ExtractSignerCertificate(const std::wstring& path) {
+    WINTRUST_FILE_INFO fileInfo = {};
+    fileInfo.cbStruct = sizeof(WINTRUST_FILE_INFO);
+    fileInfo.pcwszFilePath = path.c_str();
+
+    WINTRUST_DATA trustData = {};
+    trustData.cbStruct = sizeof(WINTRUST_DATA);
+    trustData.dwUIChoice = WTD_UI_NONE;
+    trustData.fdwRevocationChecks = WTD_REVOKE_NONE;
+    trustData.dwUnionChoice = WTD_CHOICE_FILE;
+    trustData.pFile = &fileInfo;
+    trustData.dwStateAction = WTD_STATEACTION_VERIFY;
+
+    GUID policyGUID = WINTRUST_ACTION_GENERIC_VERIFY_V2;
+    WinVerifyTrust(static_cast<HWND>(INVALID_HANDLE_VALUE), &policyGUID, &trustData);
+
+    PCCERT_CONTEXT pSigner = nullptr;
+
+    // Walk the provider state data to find the signer certificate.
+    CRYPT_PROVIDER_DATA* pProvData = WTHelperProvDataFromStateData(trustData.hWVTStateData);
+    if (pProvData) {
+        CRYPT_PROVIDER_SGNR* pSgnr = WTHelperGetProvSignerFromChain(pProvData, 0, FALSE, 0);
+        if (pSgnr) {
+            CRYPT_PROVIDER_CERT* pCert =
+                WTHelperGetProvCertFromChain(pSgnr, 0);
+            if (pCert && pCert->pCert) {
+                // Duplicate so it survives the close.
+                pSigner = CertDuplicateCertificateContext(pCert->pCert);
+            }
+        }
+    }
+
+    // Close the state data.
+    trustData.dwStateAction = WTD_STATEACTION_CLOSE;
+    WinVerifyTrust(static_cast<HWND>(INVALID_HANDLE_VALUE), &policyGUID, &trustData);
+
+    return pSigner;  // Caller must CertFreeCertificateContext this.
+}
+
+bool VerifySignerCertificate(const std::wstring& path) {
+#ifdef ONYX_SKIP_INTEGRITY
+    return true;
+#endif
+
+    PCCERT_CONTEXT pSigner = ExtractSignerCertificate(path);
+    if (!pSigner) return false;
+
+    std::string thumbprint = CertSha256Thumbprint(pSigner);
+    CertFreeCertificateContext(pSigner);
+
+    if (thumbprint.empty()) return false;
+
+    // Case-insensitive compare against the pinned thumbprint.
+    return _stricmp(thumbprint.c_str(), PINNED_CERT_THUMBPRINT_SHA256.c_str()) == 0;
+}
+
+// ============================================================================
+// LAYER 4: FULL CERTIFICATE CHAIN VERIFICATION
+// ============================================================================
+//
+// Builds the full certificate chain from the leaf cert up to the trusted
+// root, then verifies the chain policy. This catches:
+//   - A leaf cert that doesn't chain to a trusted root
+//   - An expired or revoked certificate in the chain
+//   - A chain with a broken or missing intermediate
+//
+// WinVerifyTrust already does chain verification, but this is an explicit
+// second check that also lets us inspect each certificate in the chain.
+
+bool VerifyCertificateChain(const std::wstring& path) {
+#ifdef ONYX_SKIP_INTEGRITY
+    return true;
+#endif
+
+    PCCERT_CONTEXT pSigner = ExtractSignerCertificate(path);
+    if (!pSigner) return false;
+
+    // Build the chain. CERT_CHAIN_REVOCATION_STATUS enables revocation
+    // checking for the entire chain.
+    CERT_CHAIN_PARA chainPara = {};
+    chainPara.cbSize = sizeof(CERT_CHAIN_PARA);
+    chainPara.RequestedUsage.dwType = USAGE_MATCH_TYPE_AND;
+
+    // Request revocation checking for the whole chain.
+    chainPara.dwRevocationFlags = CERT_CHAIN_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT;
+
+    PCCERT_CHAIN_CONTEXT pChainContext = nullptr;
+    BOOL chainBuilt = CertGetCertificateChain(
+        CERT_CHAIN_POLICY_AUTHENTICODE,  // use the Authenticode chain engine
+        pSigner,
+        nullptr,                         // current time
+        nullptr,                         // no additional store
+        &chainPara,
+        CERT_CHAIN_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT,
+        nullptr,
+        &pChainContext
+    );
+
+    CertFreeCertificateContext(pSigner);
+
+    if (!chainBuilt || !pChainContext) return false;
+
+    // Verify the chain policy (AUTHENTICODE) — checks trust, validity
+    // periods, and revocation for every cert in the chain.
+    AUTHENTICODE_EXTRA_CERT_CHAIN_POLICY_PARA extraPara = {};
+    extraPara.cbSize = sizeof(extraPara);
+    extraPara.dwRegPolicyType = 0;
+    extraPara.fCommercial = TRUE;
+
+    CERT_CHAIN_POLICY_PARA policyPara = {};
+    policyPara.cbSize = sizeof(policyPara);
+    policyPara.dwFlags = 0;
+    policyPara.pvExtraPolicyStatus = &extraPara;
+
+    CERT_CHAIN_POLICY_STATUS policyStatus = {};
+    policyStatus.cbSize = sizeof(policyStatus);
+
+    BOOL policyOK = CertVerifyCertificateChainPolicy(
+        CERT_CHAIN_POLICY_AUTHENTICODE,
+        pChainContext,
+        &policyPara,
+        &policyStatus
+    );
+
+    CertFreeCertificateChain(pChainContext);
+
+    if (!policyOK) return false;
+
+    // policyStatus.dwError == 0 means the chain is fully valid.
+    return policyStatus.dwError == 0;
+}
+
+// ============================================================================
+// COMBINED VERIFICATION — all four layers must pass
+// ============================================================================
+
+struct VerificationResult {
+    bool hashOK;
+    bool signatureOK;
+    bool signerOK;
+    bool chainOK;
+    bool allOK() const { return hashOK && signatureOK && signerOK && chainOK; }
+};
+
+VerificationResult VerifyAll() {
+    VerificationResult result = {};
+
+#ifdef ONYX_SKIP_INTEGRITY
+    result = { true, true, true, true };
+    return result;
+#endif
+
+    const std::wstring selfPath = GetSelfPath();
+    if (selfPath.empty()) return result;
+
+    // Layer 1: SHA-256 self-hash.
+    const std::string actualHash = Sha256OfFileExcluding(selfPath, EXPECTED_HASH);
+    result.hashOK = !actualHash.empty() &&
+                    _stricmp(actualHash.c_str(), EXPECTED_HASH.c_str()) == 0;
+
+    // Layer 2: Authenticode signature present and valid.
+    result.signatureOK = VerifyAuthenticodeSignature(selfPath);
+
+    // Layer 3: Signer certificate pinned.
+    result.signerOK = VerifySignerCertificate(selfPath);
+
+    // Layer 4: Full certificate chain valid.
+    result.chainOK = VerifyCertificateChain(selfPath);
+
+    return result;
+}
+
+// ============================================================================
+// LOAD-TIME RE-VERIFICATION
+// ============================================================================
+//
+// Re-checks a file's Authenticode signature AND signer certificate before
+// loading it (e.g., a DLL, a Lua script module, a config file). This catches
+// an attacker who swaps the file between the startup check and the load call.
+//
+// Returns true only if:
+//   - The file has a valid Authenticode signature
+//   - The signer cert thumbprint matches the pinned value
+
+bool VerifyFileSignature(const std::wstring& path) {
+#ifdef ONYX_SKIP_INTEGRITY
+    return true;
+#endif
+
+    if (!VerifyAuthenticodeSignature(path)) return false;
+    if (!VerifySignerCertificate(path)) return false;
+    return true;
+}
+
+// Convenience overload for narrow-string paths (e.g., from N-API).
+bool VerifyFileSignature(const std::string& path) {
+    if (path.empty()) return false;
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, path.c_str(), -1, nullptr, 0);
+    std::wstring wpath(wlen, 0);
+    MultiByteToWideChar(CP_UTF8, 0, path.c_str(), -1, &wpath[0], wlen);
+    return VerifyFileSignature(wpath);
+}
+
+// ============================================================================
+// DEV HELPERS + FAILURE HANDLING
+// ============================================================================
+
 static void PrintHashAndExit() {
     const std::wstring selfPath = GetSelfPath();
     const std::string h = Sha256OfFileExcluding(selfPath, EXPECTED_HASH);
@@ -212,14 +517,13 @@ void HandleIntegrityFailure() {
     MessageBoxA(
         nullptr,
         "Onyx failed its integrity verification.\n\n"
-        "This installation may be corrupted or modified. Onyx will not start. "
-        "You can uninstall it through Windows Settings and reinstall it from "
-        "the official source.",
+        "This installation may be corrupted, modified, or signed by an "
+        "untrusted certificate. Onyx will not start. You can uninstall it "
+        "through Windows Settings and reinstall it from the official source.",
         "Onyx — Integrity Verification Failed",
         MB_ICONERROR | MB_OK
     );
 
-    // Open the installed-apps settings page so the user can uninstall.
     ShellExecuteW(
         nullptr,
         L"open",
@@ -230,6 +534,7 @@ void HandleIntegrityFailure() {
     );
 }
 
+#ifndef ONYX_ADDON_BUILD
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     // Dev helper:  Onyx.exe --print-hash  -> print the exclusion hash and exit.
     int argc = 0;
@@ -245,7 +550,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         LocalFree(argv);
     }
 
-    if (!VerifyApplicationIntegrity()) {
+    // Run all four verification layers.
+    VerificationResult result = VerifyAll();
+    if (!result.allOK()) {
         HandleIntegrityFailure();
         return 1;
     }
@@ -253,3 +560,4 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     // Normal Onyx startup goes here.
     return 0;
 }
+#endif  // ONYX_ADDON_BUILD

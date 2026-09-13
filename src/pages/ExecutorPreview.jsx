@@ -20,7 +20,10 @@ export default function ExecutorPreview() {
   const [srcDoc, setSrcDoc] = useState("");
 
   useEffect(() => {
-    srcDocPromise.then(setSrcDoc);
+    Promise.all([
+      srcDocPromise,
+      new Promise((r) => setTimeout(r, 900)),
+    ]).then(([doc]) => setSrcDoc(doc));
   }, []);
 
   return (
@@ -32,10 +35,29 @@ export default function ExecutorPreview() {
           style={{ width: "100%", height: "calc(100vh - 56px)", border: "none", display: "block" }}
         />
       ) : (
-        <div className="flex items-center justify-center h-full">
-          <span className="font-mono text-xs animate-pulse" style={{ color: "#3A3A3A", letterSpacing: "0.14em" }}>
-            LOADING PREVIEW...
-          </span>
+        <div className="flex flex-col items-center justify-center h-full gap-8" style={{ backgroundColor: "#050505" }}>
+          <div className="relative" style={{ width: "80px", height: "80px" }}>
+            <svg className="absolute inset-0" width="80" height="80" viewBox="0 0 80 80" fill="none" style={{ animation: "onyxSpin 2s linear infinite" }}>
+              <circle cx="40" cy="40" r="36" stroke="#1A1A1A" strokeWidth="2" fill="none" />
+              <circle cx="40" cy="40" r="36" stroke="#FFFFFF" strokeWidth="2" fill="none" strokeDasharray="226" strokeDashoffset="56" strokeLinecap="round" transform="rotate(-90 40 40)" />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-white text-2xl font-black tracking-tighter" style={{ animation: "onyxPulse 1.5s ease-in-out infinite" }}>O</span>
+            </div>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <h2 className="text-white text-sm font-bold uppercase" style={{ letterSpacing: "0.3em" }}>ONYX</h2>
+            <p className="text-xs" style={{ color: "#959595", letterSpacing: "0.2em", animation: "onyxFade 1.5s ease-in-out infinite" }}>INITIALIZING PREVIEW</p>
+          </div>
+          <div className="relative overflow-hidden" style={{ width: "200px", height: "1px", backgroundColor: "#1A1A1A" }}>
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, transparent, #FFFFFF, transparent)", animation: "onyxShimmer 1.5s linear infinite" }} />
+          </div>
+          <style>{`
+            @keyframes onyxSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            @keyframes onyxPulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+            @keyframes onyxFade { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+            @keyframes onyxShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+          `}</style>
         </div>
       )}
     </div>

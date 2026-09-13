@@ -256,10 +256,31 @@ async function handleExecute() {
   showNotification("Execution not implemented.");
 }
 
+async function handleExecuteAll() {
+  saveActiveTabContent();
+  const scripts = state.tabs.map((t) => t.content.trim()).filter(Boolean);
+  if (!scripts.length) {
+    log("No scripts to execute.", "#3A3A3A");
+    showNotification("No scripts to execute.");
+    return;
+  }
+  if (window.onyx) {
+    const res = await window.onyx.execute(scripts.join("\n\n"));
+    if (res) { applyBackendResult(res); return; }
+  }
+  if (!clientAttached) {
+    log("Attach to Roblox before executing.", "#FFFFFF");
+    showNotification("Attach to Roblox before executing.");
+    return;
+  }
+  log(`Executing ${scripts.length} script(s)...`, "#FFFFFF");
+  showNotification(`Executing ${scripts.length} script(s)`);
+}
+
 function handleCopy() {
   const script = editor.value;
-  if (!script) { log("Nothing to copy.", "#3A3A3A"); return; }
-  navigator.clipboard.writeText(script).then(() => log("Script copied to clipboard."));
+  if (!script) { log("Nothing to copy.", "#3A3A3A"); showNotification("Nothing to copy."); return; }
+  navigator.clipboard.writeText(script).then(() => { log("Script copied to clipboard."); showNotification("Script copied."); }).catch(() => { log("Clipboard access denied.", "#3A3A3A"); showNotification("Clipboard access denied."); });
 }
 
 async function handlePaste() {
@@ -268,8 +289,10 @@ async function handlePaste() {
     editor.value += text;
     saveActiveTabContent();
     log("Pasted from clipboard.");
+    showNotification("Pasted from clipboard.");
   } catch {
     log("Clipboard access denied.", "#3A3A3A");
+    showNotification("Clipboard access denied.");
   }
 }
 
@@ -293,6 +316,7 @@ async function handleDownload() {
   a.click();
   URL.revokeObjectURL(url);
   log("Script saved as onyx_script.lua.");
+  showNotification("Script saved.");
 }
 
 async function handleLoad() {
@@ -343,6 +367,7 @@ function handleClear() {
   editor.value = "";
   saveActiveTabContent();
   log("Editor cleared.");
+  showNotification("Editor cleared.");
 }
 
 editor.addEventListener("input", () => {

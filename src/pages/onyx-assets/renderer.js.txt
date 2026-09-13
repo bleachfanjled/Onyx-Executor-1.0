@@ -568,6 +568,66 @@ window.addEventListener("message", (event) => {
   }
 });
 
+// === CLOSE DIALOG & TAB PERSISTENCE ===
+const closeDialog = document.getElementById("closeDialog");
+const closeSaveBtn = document.getElementById("closeSaveBtn");
+const closeNoSaveBtn = document.getElementById("closeNoSaveBtn");
+const closeCancelBtn = document.getElementById("closeCancelBtn");
+
+function saveTabsToStorage() {
+  try {
+    saveActiveTabContent();
+    localStorage.setItem("onyx_saved_tabs", JSON.stringify(state.tabs));
+    localStorage.setItem("onyx_selected_tab", selectedTabId);
+  } catch (e) {}
+}
+
+function restoreTabsFromStorage() {
+  try {
+    const saved = localStorage.getItem("onyx_saved_tabs");
+    if (saved) {
+      const tabs = JSON.parse(saved);
+      if (Array.isArray(tabs) && tabs.length > 0) {
+        state.tabs = tabs;
+        const savedSelected = localStorage.getItem("onyx_selected_tab");
+        selectedTabId = savedSelected && tabs.find(t => t.id === savedSelected)
+          ? savedSelected
+          : tabs[0].id;
+        editor.value = getActiveTab().content;
+        return true;
+      }
+    }
+  } catch (e) {}
+  return false;
+}
+
+function showCloseDialog() {
+  const hasContent = state.tabs.some(tab => tab.content.trim().length > 0);
+  if (!hasContent) {
+    if (window.electronAPI && window.electronAPI.respondClose) window.electronAPI.respondClose(true);
+    return;
+  }
+  closeDialog.classList.remove("hidden");
+}
+
+if (closeSaveBtn) closeSaveBtn.addEventListener("click", () => {
+  saveTabsToStorage();
+  closeDialog.classList.add("hidden");
+  if (window.electronAPI && window.electronAPI.respondClose) window.electronAPI.respondClose(true);
+});
+if (closeNoSaveBtn) closeNoSaveBtn.addEventListener("click", () => {
+  closeDialog.classList.add("hidden");
+  if (window.electronAPI && window.electronAPI.respondClose) window.electronAPI.respondClose(true);
+});
+if (closeCancelBtn) closeCancelBtn.addEventListener("click", () => {
+  closeDialog.classList.add("hidden");
+  if (window.electronAPI && window.electronAPI.respondClose) window.electronAPI.respondClose(false);
+});
+
+if (window.electronAPI && window.electronAPI.onClosing) {
+  window.electronAPI.onClosing(() => showCloseDialog());
+}
+
 // === ONBOARDING SYSTEM ===
 const onboarding = document.getElementById("onboarding");
 const blurTop = document.getElementById("blurTop");
@@ -761,8 +821,10 @@ tutorialSkip.addEventListener("click", closeOnboarding);
 tutorialNext.addEventListener("click", () => showTutorialStep(currentStep + 1));
 tutorialBack.addEventListener("click", () => showTutorialStep(currentStep - 1));
 
-selectedTabId = state.tabs[0].id;
-editor.value = state.tabs[0].content;
+if (!restoreTabsFromStorage()) {
+  selectedTabId = state.tabs[0].id;
+  editor.value = state.tabs[0].content;
+}
 renderTabs();
 syncAttachButton();
 

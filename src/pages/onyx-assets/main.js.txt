@@ -15,6 +15,7 @@ if (process.platform === "win32") {
 }
 
 let mainWindow = null;
+let closeConfirmed = false;
 
 // ---- C++ backend (native addon) ----
 // Build it first:  npm run rebuild   (needs node-gyp + Visual Studio Build Tools)
@@ -61,6 +62,13 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, "index.html"));
 
+  // Intercept close to give the renderer a chance to save scripts.
+  mainWindow.on("close", (e) => {
+    if (closeConfirmed) return;
+    e.preventDefault();
+    mainWindow.webContents.send("app-closing");
+  });
+
   mainWindow.on("closed", () => { mainWindow = null; });
 
   // Surface renderer/preload load failures to the user instead of a blank window.
@@ -80,6 +88,13 @@ ipcMain.on("window-minimize", () => {
 
 ipcMain.on("window-close", () => {
   if (mainWindow) mainWindow.close();
+});
+
+ipcMain.on("onyx:close-response", (_e, shouldClose) => {
+  if (shouldClose) {
+    closeConfirmed = true;
+    if (mainWindow) mainWindow.close();
+  }
 });
 
 ipcMain.on("window-maximize", () => {

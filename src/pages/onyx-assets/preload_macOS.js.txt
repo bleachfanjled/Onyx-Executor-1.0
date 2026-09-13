@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   minimize: () => ipcRenderer.send("window-minimize"),
   maximize: () => ipcRenderer.send("window-maximize"),
   close: () => ipcRenderer.send("window-close"),
+  onClosing: (callback) => ipcRenderer.on("app-closing", callback),
+  respondClose: (shouldClose) => ipcRenderer.send("onyx:close-response", shouldClose),
 });
 
 // C++ backend bridge — renderer calls these; main process forwards to onyx.node

@@ -4,8 +4,8 @@ import { Link } from "react-router-dom";
 
 const features = [
   {
-    label: "Safety-First Scanning",
-    description: "Every shared script is scanned for malicious patterns — loadstring payloads, remote fetches, clipboard theft — before it reaches you.",
+    label: "Safety-First Verification",
+    description: "Every launch is scanned for malware — SHA-256 hashing, Authenticode signature checks, certificate pinning, and chain verification run before the editor even appears.",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -14,12 +14,13 @@ const features = [
     ),
   },
   {
-    label: "Community Script Hub",
-    description: "Create, share, and browse scripts in one place. Open, free, and built so you don't have to trust random pastebin links.",
+    label: "Clean, Focused Editor",
+    description: "A distraction-free script editor with multi-tab support, one-click save/load, and an integrated AI assistant that teaches Lua concepts — without writing scripts for you.",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <polyline points="16 18 22 12 16 6" />
-        <polyline points="8 6 2 12 8 18" />
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path d="M3 9h18" />
+        <path d="M9 21V9" />
       </svg>
     ),
   },
@@ -123,8 +124,8 @@ export default function Home() {
               lineHeight: 1.7,
             }}
           >
-            A community-built Roblox script hub with safety-first scanning.
-            Share scripts, browse vetted code, and keep the fun without the malware.
+            A community-built educational executor with safety-first verification.
+            Write, debug, and learn Lua — without the malware, the key systems, or the catch.
           </p>
 
           {/* CTAs */}

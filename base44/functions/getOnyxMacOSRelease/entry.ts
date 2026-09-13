@@ -50,12 +50,21 @@ export default async function(req) {
     const asset = pool.reduce((best, cur) =>
       !best || (cur.size || 0) > (best.size || 0) ? cur : best, null);
 
+    // Try to extract SHA-256 from the release body (description).
+    // Include "SHA-256 (macOS): <64-hex-chars>" in the release description.
+    let sha256 = null;
+    if (release.body) {
+      const match = release.body.match(/SHA-256\s*\(?\s*[Mm]ac[Oo][Ss]?\s*\)?\s*[:\s]*\s*([a-fA-F0-9]{64})/);
+      if (match) sha256 = match[1];
+    }
+
     return Response.json({
       downloadUrl: asset.browser_download_url,
       version: release.tag_name,
       releaseName: release.name,
       assetName: asset.name,
-      sizeMb: (asset.size / 1024 / 1024).toFixed(1)
+      sizeMb: (asset.size / 1024 / 1024).toFixed(1),
+      sha256
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

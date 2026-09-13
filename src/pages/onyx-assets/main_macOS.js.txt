@@ -13,6 +13,7 @@ const path = require("path");
 const { execSync } = require("child_process");
 
 let mainWindow = null;
+let closeConfirmed = false;
 
 // ---- C++ backend (native addon) ----
 // Optional on macOS. If you build it (`npm run rebuild`), it loads; otherwise
@@ -55,6 +56,13 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, "index.html"));
 
+  // Intercept close to give the renderer a chance to save scripts.
+  mainWindow.on("close", (e) => {
+    if (closeConfirmed) return;
+    e.preventDefault();
+    mainWindow.webContents.send("app-closing");
+  });
+
   mainWindow.on("closed", () => { mainWindow = null; });
 
   // Surface load failures instead of a blank window.
@@ -76,6 +84,13 @@ ipcMain.on("window-minimize", () => {
 
 ipcMain.on("window-close", () => {
   if (mainWindow) mainWindow.close();
+});
+
+ipcMain.on("onyx:close-response", (_e, shouldClose) => {
+  if (shouldClose) {
+    closeConfirmed = true;
+    if (mainWindow) mainWindow.close();
+  }
 });
 
 ipcMain.on("window-maximize", () => {

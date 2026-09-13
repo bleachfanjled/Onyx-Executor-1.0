@@ -277,6 +277,19 @@
     </div>
   </div>
 
+  <!-- Close Confirmation Dialog -->
+  <div id="closeDialog" class="hidden fixed inset-0 z-[300] flex items-center justify-center" style="background: rgba(5,5,5,0.85); backdrop-filter: blur(4px);">
+    <div class="glass p-8" style="max-width: 400px;">
+      <h2 class="text-white text-sm font-bold uppercase tracking-[0.2em] mb-4">Save Your Scripts?</h2>
+      <p class="text-[#959595] text-xs leading-relaxed mb-6">Do you want to save your open tabs so they're restored the next time you open Onyx?</p>
+      <div class="flex flex-col gap-2">
+        <button id="closeSaveBtn" class="premium-btn onyx-btn-solid h-10 px-6 bg-white text-black text-[10px] uppercase tracking-widest font-bold hover:bg-[#E0E0E0] transition-all">Save &amp; Close</button>
+        <button id="closeNoSaveBtn" class="premium-btn h-10 px-6 border border-[#3A3A3A] text-white text-[10px] uppercase tracking-widest hover:bg-[#1A1A1A] transition-all">Close Without Saving</button>
+        <button id="closeCancelBtn" class="text-[#959595] text-[10px] uppercase tracking-widest hover:text-white transition-all py-2">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     (function () {
       var isMac = window.electronAPI && window.electronAPI.platform === "darwin";

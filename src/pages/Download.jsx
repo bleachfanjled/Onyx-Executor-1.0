@@ -3,10 +3,6 @@ import { Download, Shield, Monitor, Apple, X, ShieldCheck, AlertTriangle } from 
 import { base44 } from "@/api/base44Client";
 
 const VERSION = "1.0";
-// Fallback hashes — overridden by the hash extracted from the GitHub release
-// body. To update: include "SHA-256 (Windows): <hash>" in the release description.
-const SHA256_WINDOWS = "a3f8c2e1d74b5960fe2318a0c9d47b8e6f1205a3c8d9e7f04b2163a5c8d9e7f0";
-const SHA256_MACOS = "b4e9d3f2e86c6071fa3429b1d0e58c9f702316b4d9e8f05c3274b6d9e8f01a2b";
 
 export default function DownloadPage() {
   const [downloading, setDownloading] = useState(false);
@@ -34,8 +30,8 @@ export default function DownloadPage() {
 
   const fileSize = release ? `${release.sizeMb} MB` : "—";
   const macFileSize = macRelease ? `${macRelease.sizeMb} MB` : "—";
-  const winHash = release?.sha256 || SHA256_WINDOWS;
-  const macHash = macRelease?.sha256 || SHA256_MACOS;
+  const winHash = release?.sha256 || null;
+  const macHash = macRelease?.sha256 || null;
 
   const handleDownload = () => {
     if (downloading || done || !release || !confirmed) return;
@@ -434,11 +430,12 @@ export default function DownloadPage() {
                 </p>
                 <p
                   className="font-mono text-xs truncate"
-                  style={{ color: "#959595", letterSpacing: "0.04em" }}
-                  title={winHash}>
-                  {winHash}
+                  style={{ color: winHash ? "#959595" : "#3A3A3A", letterSpacing: "0.04em" }}
+                  title={winHash || "Hash not available"}>
+                  {winHash || "Not available"}
                 </p>
               </div>
+              {winHash &&
               <button
                 onClick={() => copyHash(winHash, "windows")}
                 className="flex-shrink-0 font-mono text-xs uppercase transition-sharp focus:outline-white"
@@ -452,6 +449,7 @@ export default function DownloadPage() {
                 onMouseLeave={(e) => {if (copiedHash !== "windows") e.currentTarget.style.color = "#3A3A3A";}}>
                 {copiedHash === "windows" ? "COPIED" : "COPY"}
               </button>
+              }
             </div>
           </div>
 
@@ -518,11 +516,12 @@ export default function DownloadPage() {
                 </p>
                 <p
                   className="font-mono text-xs truncate"
-                  style={{ color: "#959595", letterSpacing: "0.04em" }}
-                  title={macHash}>
-                  {macHash}
+                  style={{ color: macHash ? "#959595" : "#3A3A3A", letterSpacing: "0.04em" }}
+                  title={macHash || "Hash not available"}>
+                  {macHash || "Not available"}
                 </p>
               </div>
+              {macHash &&
               <button
                 onClick={() => copyHash(macHash, "macos")}
                 className="flex-shrink-0 font-mono text-xs uppercase transition-sharp focus:outline-white"
@@ -536,6 +535,7 @@ export default function DownloadPage() {
                 onMouseLeave={(e) => {if (copiedHash !== "macos") e.currentTarget.style.color = "#3A3A3A";}}>
                 {copiedHash === "macos" ? "COPIED" : "COPY"}
               </button>
+              }
             </div>
           </div>
 

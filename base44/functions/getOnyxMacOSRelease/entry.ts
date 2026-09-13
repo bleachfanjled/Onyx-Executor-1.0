@@ -50,10 +50,12 @@ export default async function(req) {
     const asset = pool.reduce((best, cur) =>
       !best || (cur.size || 0) > (best.size || 0) ? cur : best, null);
 
-    // Try to extract SHA-256 from the release body (description).
-    // Include "SHA-256 (macOS): <64-hex-chars>" in the release description.
+    // Extract SHA-256: first from GitHub's built-in asset digest, then from the release body.
     let sha256 = null;
-    if (release.body) {
+    if (asset.digest && typeof asset.digest === "string" && asset.digest.startsWith("sha256:")) {
+      sha256 = asset.digest.substring(7);
+    }
+    if (!sha256 && release.body) {
       const match = release.body.match(/SHA-256\s*\(?\s*[Mm]ac[Oo][Ss]?\s*\)?\s*[:\s]*\s*([a-fA-F0-9]{64})/);
       if (match) sha256 = match[1];
     }

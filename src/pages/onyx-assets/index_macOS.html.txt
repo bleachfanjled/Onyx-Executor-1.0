@@ -57,9 +57,8 @@
     .onyx-spotlight { position: relative !important; z-index: 201 !important; animation: spotlightPulse 2s ease-in-out infinite !important; }
 
     /* === TOAST === */
-    #toast { opacity: 0; transform: translateY(-8px); transition: opacity 220ms ease, transform 220ms ease, filter 220ms ease; filter: blur(4px); }
+    #toast { opacity: 0; transform: translateY(-8px); transition: opacity 220ms ease, transform 220ms ease, filter 220ms ease; filter: blur(4px); pointer-events: none; }
     #toast.visible { opacity: 1; transform: translateY(0); filter: blur(0); }
-    #toast.hidden { opacity: 0; transform: translateY(-8px); filter: blur(6px); }
 
     /* === ONBOARDING === */
     #onboarding { transition: opacity 0.5s ease; }
@@ -113,7 +112,7 @@
     <button data-action="close" class="block w-full text-left px-3 py-2 hover:bg-[#1A1A1A] hover:text-white transition-all">Close</button>
   </div>
 
-  <div id="toast" class="hidden fixed right-4 top-4 z-50 border border-[#1A1A1A] bg-[#0D0D0D] text-[11px] text-white px-3 py-2 shadow-lg">Roblox Processes Terminated</div>
+  <div id="toast" class="fixed right-4 top-4 z-50 border border-[#1A1A1A] bg-[#0D0D0D] text-[11px] text-white px-3 py-2 shadow-lg">Roblox Processes Terminated</div>
 
   <!-- ==================== ONBOARDING OVERLAY ==================== -->
   <div id="onboarding" class="fixed inset-0 z-[200] bg-[#050505] flex items-center justify-center opacity-0">

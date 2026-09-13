@@ -220,7 +220,6 @@ function applyBackendResult(res) {
 
 function showNotification(msg) {
   toast.textContent = msg;
-  toast.classList.remove("hidden");
   toast.classList.remove("visible");
   void toast.offsetWidth;
   toast.classList.add("visible");
@@ -228,7 +227,6 @@ function showNotification(msg) {
   clearTimeout(showNotification.timeoutId);
   showNotification.timeoutId = setTimeout(() => {
     toast.classList.remove("visible");
-    toast.classList.add("hidden");
   }, 1800);
 }
 

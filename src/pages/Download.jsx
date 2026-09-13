@@ -19,8 +19,8 @@ export default function DownloadPage() {
       .catch(() => setReleaseError(true));
   }, []);
 
-  const fileSize = "181 MB";
-  const decompressedSize = "181 MB";
+  const fileSize = "258 MB";
+  const decompressedSize = "258 MB";
 
   const handleDownload = () => {
     if (downloading || done || !release || !confirmed) return;

@@ -127,7 +127,7 @@
       ></textarea>
     </div>
 
-    <div class="anim-actions h-14 border-t border-[#1A1A1A] flex items-center px-4 gap-2 shrink-0">
+    <div id="actionBar" class="anim-actions h-14 border-t border-[#1A1A1A] flex items-center px-4 gap-2 shrink-0" style="display: none;">
       <button onclick="handleExecute()" class="anim-btn-1 premium-btn onyx-btn-solid h-9 px-6 bg-white text-black font-bold text-[10px] uppercase tracking-widest hover:bg-[#E0E0E0] transition-all">Execute</button>
       <button id="attachButton" onclick="handleAttach()" class="anim-btn-2 premium-btn h-9 px-4 border border-[#3B82F6] text-[#3B82F6] text-[10px] uppercase tracking-widest hover:bg-[#3B82F6] hover:text-white transition-all">Attach</button>
       <button onclick="handleKillRoblox()" class="anim-btn-3 premium-btn h-9 px-4 border border-[#FF3B30] text-[#FF3B30] text-[10px] uppercase tracking-widest hover:bg-[#FF3B30] hover:text-white transition-all">Kill Roblox</button>

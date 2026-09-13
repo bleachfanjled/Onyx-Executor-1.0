@@ -518,6 +518,7 @@ function showWelcome() {
 }
 
 function startTutorial() {
+  document.getElementById("actionBar").style.display = "flex";
   welcomeScreen.style.opacity = "0";
   setTimeout(() => {
     welcomeScreen.style.display = "none";
@@ -575,6 +576,7 @@ function showTutorialStep(step) {
 
 function closeOnboarding() {
   if (spotlightEl) { spotlightEl.classList.remove("onyx-spotlight"); spotlightEl = null; }
+  document.getElementById("actionBar").style.display = "flex";
   tutorialTooltip.style.opacity = "0";
   onboarding.style.opacity = "0";
   blurTop.style.display = "none";

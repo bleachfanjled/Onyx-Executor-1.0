@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import ScriptCreator from "@/components/scripts/ScriptCreator";
 import ScriptCard from "@/components/scripts/ScriptCard";
+import Leaderboard from "@/components/scripts/Leaderboard";
 
 const FILTERS = [
   { label: "All", value: "all" },
@@ -84,6 +85,9 @@ export default function Scripts() {
           </button>
           {showCreator && <ScriptCreator onPublished={() => {}} />}
         </div>
+
+        {/* leaderboard */}
+        <Leaderboard scripts={scripts} />
 
         {/* filters + list */}
         <div className="py-12">

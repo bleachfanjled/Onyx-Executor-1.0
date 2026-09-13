@@ -51,6 +51,18 @@
       "items": {
         "type": "object"
       }
+    },
+    "downloads": {
+      "type": "number",
+      "default": 0
+    },
+    "rating_sum": {
+      "type": "number",
+      "default": 0
+    },
+    "rating_count": {
+      "type": "number",
+      "default": 0
     }
   },
   "required": [

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { Copy, Check, ChevronDown, ChevronUp, Star, Download } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 
 const STATUS = {
   pending: { label: "PENDING", color: "#959595", dot: "#3A3A3A" },
@@ -8,16 +9,71 @@ const STATUS = {
   dangerous: { label: "DANGEROUS", color: "#FF3B30", dot: "#FF3B30" },
 };
 
+const ratedKey = (id) => `onyx_rated_${id}`;
+
+function Stars({ value, size = 12, interactive = false, onRate, hover = 0, setHover }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => {
+        const shown = interactive ? (hover || value) >= n : value >= n;
+        return (
+          <button
+            key={n}
+            type="button"
+            onClick={interactive && onRate ? () => onRate(n) : undefined}
+            onMouseEnter={interactive && setHover ? () => setHover(n) : undefined}
+            onMouseLeave={interactive && setHover ? () => setHover(0) : undefined}
+            style={{ lineHeight: 0, cursor: interactive ? "pointer" : "default" }}
+            aria-label={`${n} star${n > 1 ? "s" : ""}`}
+          >
+            <Star size={size} fill={shown ? "#FFFFFF" : "none"} stroke={shown ? "#FFFFFF" : "#3A3A3A"} />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ScriptCard({ script }) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
+  const [rated, setRated] = useState(() =>
+    typeof window !== "undefined" && !!localStorage.getItem(ratedKey(script.id))
+  );
+  const [hoverRating, setHoverRating] = useState(0);
   const s = STATUS[script.safety_status] || STATUS.pending;
+
+  const avg = script.rating_count > 0 ? script.rating_sum / script.rating_count : 0;
+  const interactive = !rated;
 
   const copy = () => {
     navigator.clipboard.writeText(script.code || "").then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     });
+  };
+
+  const download = () => {
+    setDownloaded(true);
+    base44.entities.Script.updateMany({ id: script.id }, { $inc: { downloads: 1 } }).catch(() => {});
+    const blob = new Blob([script.code || ""], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(script.title || "script").replace(/[^a-z0-9_-]+/gi, "_")}.lua`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const rate = (n) => {
+    if (!interactive) return;
+    localStorage.setItem(ratedKey(script.id), String(n));
+    setRated(true);
+    setHoverRating(0);
+    base44.entities.Script.updateMany({ id: script.id }, { $inc: { rating_sum: n, rating_count: 1 } }).catch(() => {});
   };
 
   return (
@@ -115,7 +171,31 @@ export default function ScriptCard({ script }) {
           </p>
         )}
 
-        <div className="flex items-center gap-3 mt-4">
+        {/* community stats */}
+        <div className="flex items-center gap-4 mt-4 mb-4" style={{ borderTop: "1px solid #1A1A1A", paddingTop: "12px" }}>
+          <div className="flex items-center gap-2">
+            <Download size={12} style={{ color: "#959595" }} />
+            <span className="font-mono text-xs" style={{ color: "#959595", letterSpacing: "0.06em" }}>
+              {script.downloads || 0} {(script.downloads || 0) === 1 ? "download" : "downloads"}
+            </span>
+          </div>
+          <div style={{ width: "1px", height: "12px", backgroundColor: "#1A1A1A" }} />
+          <div className="flex items-center gap-2">
+            <Stars
+              value={Math.round(avg)}
+              interactive={interactive}
+              onRate={rate}
+              hover={hoverRating}
+              setHover={setHoverRating}
+            />
+            <span className="font-mono text-xs" style={{ color: "#959595", letterSpacing: "0.06em" }}>
+              {script.rating_count > 0 ? avg.toFixed(1) : "—"} ({script.rating_count || 0})
+            </span>
+          </div>
+        </div>
+
+        {/* actions */}
+        <div className="flex items-center gap-3 flex-wrap">
           <button
             onClick={copy}
             className="flex items-center gap-2 font-mono text-xs uppercase transition-sharp"
@@ -123,6 +203,14 @@ export default function ScriptCard({ script }) {
           >
             {copied ? <Check size={12} /> : <Copy size={12} />}
             {copied ? "COPIED" : "COPY"}
+          </button>
+          <button
+            onClick={download}
+            className="flex items-center gap-2 font-mono text-xs uppercase transition-sharp"
+            style={{ color: downloaded ? "#FFFFFF" : "#959595", letterSpacing: "0.1em", border: "1px solid #1A1A1A", padding: "6px 12px" }}
+          >
+            <Download size={12} />
+            {downloaded ? "DOWNLOADED" : "DOWNLOAD"}
           </button>
           <button
             onClick={() => setExpanded(!expanded)}

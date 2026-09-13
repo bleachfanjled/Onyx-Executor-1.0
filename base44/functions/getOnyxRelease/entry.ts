@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
 
-const REPO = "bleachfanjled/Onyx-Executor";
+const REPO = "bleachfanjled/Onyx-Executor-v1.0";
 
 export default async function(req) {
   try {
@@ -40,9 +40,10 @@ export default async function(req) {
       return Response.json({ error: "No downloadable asset found on the release" }, { status: 404 });
     }
 
-    // Prefer the largest .exe asset; fall back to the largest asset overall
+    // Pick the Windows asset: name contains "windows", else largest .exe, else largest overall
+    const winAssets = assets.filter(a => a.name.toLowerCase().includes("windows"));
     const exes = assets.filter(a => a.name.toLowerCase().endsWith(".exe"));
-    const pool = exes.length > 0 ? exes : assets;
+    const pool = winAssets.length > 0 ? winAssets : exes.length > 0 ? exes : assets;
     const asset = pool.reduce((best, cur) =>
       !best || (cur.size || 0) > (best.size || 0) ? cur : best, null);
 

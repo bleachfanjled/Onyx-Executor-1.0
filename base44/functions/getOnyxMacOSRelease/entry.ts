@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
 
-const REPO = "bleachfanjled/Onyx-Executor-MacOS";
+const REPO = "bleachfanjled/Onyx-Executor-v1.0";
 
 export default async function(req) {
   try {
@@ -40,10 +40,13 @@ export default async function(req) {
       return Response.json({ error: "No downloadable asset found on the release" }, { status: 404 });
     }
 
-    // Prefer a .zip asset; fall back to .dmg, then the largest asset overall
-    const zips = assets.filter(a => a.name.toLowerCase().endsWith(".zip"));
+    // Pick the macOS asset: name contains "macos" or "mac", else .dmg, else largest overall
+    const macAssets = assets.filter(a => {
+      const n = a.name.toLowerCase();
+      return n.includes("macos") || n.includes("mac");
+    });
     const dmgs = assets.filter(a => a.name.toLowerCase().endsWith(".dmg"));
-    const pool = zips.length > 0 ? zips : dmgs.length > 0 ? dmgs : assets;
+    const pool = macAssets.length > 0 ? macAssets : dmgs.length > 0 ? dmgs : assets;
     const asset = pool.reduce((best, cur) =>
       !best || (cur.size || 0) > (best.size || 0) ? cur : best, null);
 

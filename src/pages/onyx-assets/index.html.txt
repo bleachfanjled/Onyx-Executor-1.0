@@ -11,6 +11,20 @@
     body { margin: 0; overflow: hidden; background: #050505; }
     textarea { caret-color: white; }
     textarea::placeholder { color: #2a2a2a; }
+    .win-btn {
+      width: 14px; height: 14px; border-radius: 9999px;
+      background-color: #1A1A1A;
+      display: flex; align-items: center; justify-content: center;
+      transition: background-color 120ms ease;
+    }
+    .win-btn .win-icon {
+      opacity: 0;
+      transition: opacity 120ms ease;
+      color: #FFFFFF;
+    }
+    .win-btn:hover { background-color: #3A3A3A; }
+    .win-btn:hover .win-icon { opacity: 1; }
+    .win-btn-close:hover { background-color: #FF3B30; }
     #toast {
       opacity: 0;
       transform: translateY(-8px);
@@ -34,10 +48,23 @@
 
     <div id="titleBar" class="drag h-10 border-b border-[#1A1A1A] flex items-center px-4 justify-between shrink-0">
       <span class="text-[10px] tracking-[0.2em] text-[#959595]">ONYX // V1.0</span>
-      <div id="windowControls" class="flex gap-3 no-drag">
-        <button onclick="window.electronAPI.minimize()" class="w-3 h-3 rounded-full bg-[#1A1A1A] hover:bg-[#3A3A3A] transition-all"></button>
-        <button onclick="window.electronAPI.maximize()" class="w-3 h-3 rounded-full bg-[#1A1A1A] hover:bg-[#3A3A3A] transition-all"></button>
-        <button onclick="window.electronAPI.close()" class="w-3 h-3 rounded-full bg-[#1A1A1A] hover:bg-white transition-all"></button>
+      <div id="windowControls" class="flex gap-2 no-drag">
+        <button onclick="window.electronAPI.minimize()" class="win-btn" title="Minimize" aria-label="Minimize">
+          <svg class="win-icon" width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden="true">
+            <line x1="1" y1="4" x2="7" y2="4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          </svg>
+        </button>
+        <button onclick="window.electronAPI.fullscreen()" class="win-btn" title="Fullscreen" aria-label="Fullscreen">
+          <svg class="win-icon" width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden="true">
+            <path d="M1 3V1H3M7 3V1H5M1 5V7H3M7 5V7H5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+        <button onclick="window.electronAPI.close()" class="win-btn win-btn-close" title="Close" aria-label="Close">
+          <svg class="win-icon" width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden="true">
+            <line x1="1.5" y1="1.5" x2="6.5" y2="6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            <line x1="6.5" y1="1.5" x2="1.5" y2="6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          </svg>
+        </button>
       </div>
     </div>
 

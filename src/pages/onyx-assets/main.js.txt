@@ -88,6 +88,11 @@ ipcMain.on("window-maximize", () => {
   else mainWindow.maximize();
 });
 
+ipcMain.on("window-fullscreen", () => {
+  if (!mainWindow) return;
+  mainWindow.setFullScreen(!mainWindow.isFullScreen());
+});
+
 // ---- Kill Roblox ----
 // Terminate every running process whose name contains "Roblox" (launcher
 // "Roblox", game client "RobloxPlayerBeta", helpers). This is a Windows

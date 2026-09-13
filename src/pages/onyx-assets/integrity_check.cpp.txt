@@ -13,6 +13,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cstring>
 
 #pragma comment(lib, "bcrypt.lib")
 
@@ -32,8 +33,28 @@ static std::string ToHex(const unsigned char* data, size_t len) {
     return out;
 }
 
-// SHA-256 of the file at `path`, returned as a lowercase hex string.
-static std::string Sha256OfFile(const std::wstring& path) {
+// Read the entire file at `path` into a buffer. Returns empty on failure.
+static bool ReadFileAll(const std::wstring& path, std::vector<BYTE>& out) {
+    HANDLE hFile = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ,
+                               nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE) return false;
+
+    LARGE_INTEGER size;
+    if (!GetFileSizeEx(hFile, &size)) { CloseHandle(hFile); return false; }
+
+    out.resize(static_cast<size_t>(size.QuadPart));
+    DWORD bytesRead = 0;
+    if (!ReadFile(hFile, out.data(), static_cast<DWORD>(out.size()), &bytesRead, nullptr)) {
+        CloseHandle(hFile);
+        return false;
+    }
+    CloseHandle(hFile);
+    out.resize(bytesRead);
+    return true;
+}
+
+// SHA-256 of `data`, returned as a lowercase hex string.
+static std::string Sha256OfBuffer(const BYTE* data, size_t len) {
     BCRYPT_ALG_HANDLE hAlg = nullptr;
     if (BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_SHA256_ALGORITHM, nullptr, 0) != 0)
         return {};
@@ -44,26 +65,87 @@ static std::string Sha256OfFile(const std::wstring& path) {
         return {};
     }
 
-    HANDLE hFile = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ,
-                               nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (hFile == INVALID_HANDLE_VALUE) {
+    if (BCryptHashData(hHash, data, static_cast<ULONG>(len), 0) != 0) {
         BCryptDestroyHash(hHash);
         BCryptCloseAlgorithmProvider(hAlg, 0);
         return {};
     }
 
-    constexpr DWORD CHUNK = 1 << 20; // 1 MB
-    std::vector<BYTE> buffer(CHUNK);
-    DWORD bytesRead = 0;
-    while (ReadFile(hFile, buffer.data(), CHUNK, &bytesRead, nullptr) && bytesRead > 0) {
-        if (BCryptHashData(hHash, buffer.data(), bytesRead, 0) != 0) {
-            CloseHandle(hFile);
+    BYTE hash[32] = { 0 };
+    if (BCryptFinishHash(hHash, hash, sizeof(hash), 0) != 0) {
+        BCryptDestroyHash(hHash);
+        BCryptCloseAlgorithmProvider(hAlg, 0);
+        return {};
+    }
+
+    BCryptDestroyHash(hHash);
+    BCryptCloseAlgorithmProvider(hAlg, 0);
+    return ToHex(hash, sizeof(hash));
+}
+
+// SHA-256 of the file at `path`, but SKIPS the byte region where
+// `skipPattern` appears. This solves the chicken-and-egg problem: the
+// embedded EXPECTED_HASH string lives inside the .exe, so changing it
+// would normally change the hash. By excluding those exact bytes from
+// the hash, the computed hash stays stable across the embed step.
+//
+//   Build 1  (placeholder hash)  -> compute hash-excluding-placeholder = H
+//   Set      EXPECTED_HASH = H
+//   Build 2  (real hash)         -> compute hash-excluding-real = H  (same!)
+//
+static std::string Sha256OfFileExcluding(const std::wstring& path,
+                                         const std::string& skipPattern) {
+    std::vector<BYTE> fileData;
+    if (!ReadFileAll(path, fileData)) return {};
+
+    // Find the skip region (the 64-char hex string literal in the binary).
+    const BYTE* pat = reinterpret_cast<const BYTE*>(skipPattern.data());
+    size_t patLen = skipPattern.size();
+    size_t skipStart = std::string::npos;
+    if (patLen > 0 && patLen <= fileData.size()) {
+        for (size_t i = 0; i + patLen <= fileData.size(); ++i) {
+            if (memcmp(fileData.data() + i, pat, patLen) == 0) {
+                skipStart = i;
+                break;
+            }
+        }
+    }
+
+    if (skipStart == std::string::npos) {
+        // Pattern not found — hash the whole file.
+        return Sha256OfBuffer(fileData.data(), fileData.size());
+    }
+
+    // Hash everything before the skip region.
+    BCRYPT_ALG_HANDLE hAlg = nullptr;
+    if (BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_SHA256_ALGORITHM, nullptr, 0) != 0)
+        return {};
+
+    BCRYPT_HASH_HANDLE hHash = nullptr;
+    if (BCryptCreateHash(hAlg, &hHash, nullptr, 0, nullptr, 0, 0) != 0) {
+        BCryptCloseAlgorithmProvider(hAlg, 0);
+        return {};
+    }
+
+    // Before the skip region.
+    if (skipStart > 0) {
+        if (BCryptHashData(hHash, fileData.data(), static_cast<ULONG>(skipStart), 0) != 0) {
             BCryptDestroyHash(hHash);
             BCryptCloseAlgorithmProvider(hAlg, 0);
             return {};
         }
     }
-    CloseHandle(hFile);
+
+    // After the skip region.
+    size_t after = skipStart + patLen;
+    if (after < fileData.size()) {
+        if (BCryptHashData(hHash, fileData.data() + after,
+                           static_cast<ULONG>(fileData.size() - after), 0) != 0) {
+            BCryptDestroyHash(hHash);
+            BCryptCloseAlgorithmProvider(hAlg, 0);
+            return {};
+        }
+    }
 
     BYTE hash[32] = { 0 };
     if (BCryptFinishHash(hHash, hash, sizeof(hash), 0) != 0) {
@@ -85,14 +167,45 @@ static std::wstring GetSelfPath() {
 }
 
 // Returns true if the running .exe matches the expected SHA-256.
+//
+// The hash is computed over the .exe EXCLUDING the EXPECTED_HASH string
+// itself, so embedding the final hash does not change the computed value.
+//
+// RELEASE WORKFLOW:
+//   1. Build the .exe with EXPECTED_HASH set to any 64-char hex placeholder.
+//   2. Run:  Onyx.exe --print-hash   (prints the exclusion hash, then exits)
+//      OR compute it externally with the helper below.
+//   3. Paste that hash into EXPECTED_HASH.
+//   4. Rebuild. The exclusion hash is now stable and matches.
+//
+// DEV BYPASS: define ONYX_SKIP_INTEGRITY at compile time to disable the
+// check entirely during development.
 bool VerifyApplicationIntegrity() {
+#ifdef ONYX_SKIP_INTEGRITY
+    return true;
+#endif
+
     const std::wstring selfPath = GetSelfPath();
     if (selfPath.empty()) return false;
 
-    const std::string actualHash = Sha256OfFile(selfPath);
+    // Hash the .exe, skipping the embedded EXPECTED_HASH string itself.
+    const std::string actualHash = Sha256OfFileExcluding(selfPath, EXPECTED_HASH);
     if (actualHash.empty()) return false;
 
     return _stricmp(actualHash.c_str(), EXPECTED_HASH.c_str()) == 0;
+}
+
+// Helper entry point: pass --print-hash to compute and print the exclusion
+// hash of the current .exe, so you can paste it into EXPECTED_HASH.
+// Usage:  Onyx.exe --print-hash
+static void PrintHashAndExit() {
+    const std::wstring selfPath = GetSelfPath();
+    const std::string h = Sha256OfFileExcluding(selfPath, EXPECTED_HASH);
+    if (h.empty()) {
+        std::cerr << "Failed to compute hash.\n";
+    } else {
+        std::cout << h << "\n";
+    }
 }
 
 void HandleIntegrityFailure() {
@@ -118,6 +231,20 @@ void HandleIntegrityFailure() {
 }
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
+    // Dev helper:  Onyx.exe --print-hash  -> print the exclusion hash and exit.
+    int argc = 0;
+    LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    if (argv) {
+        for (int i = 1; i < argc; ++i) {
+            if (wcsicmp(argv[i], L"--print-hash") == 0) {
+                LocalFree(argv);
+                PrintHashAndExit();
+                return 0;
+            }
+        }
+        LocalFree(argv);
+    }
+
     if (!VerifyApplicationIntegrity()) {
         HandleIntegrityFailure();
         return 1;

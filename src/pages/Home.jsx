@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 
+// Onyx — GitHub 2-way sync test marker (safe to remove)
+
 const features = [
   {
     label: "Safety-First Scanning",

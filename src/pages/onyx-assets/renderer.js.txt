@@ -551,6 +551,7 @@ document.addEventListener("click", (event) => {
 
 // === ONBOARDING SYSTEM ===
 const onboarding = document.getElementById("onboarding");
+const blurOverlay = document.getElementById("blurOverlay");
 const verifyScreen = document.getElementById("verifyScreen");
 const welcomeScreen = document.getElementById("welcomeScreen");
 const tutorialTooltip = document.getElementById("tutorialTooltip");
@@ -631,6 +632,7 @@ function startTutorial() {
   setTimeout(() => {
     welcomeScreen.style.display = "none";
     onboarding.style.background = "transparent";
+    blurOverlay.style.display = "block";
     showTutorialStep(0);
   }, 400);
 }
@@ -679,6 +681,7 @@ function closeOnboarding() {
   if (spotlightEl) { spotlightEl.classList.remove("onyx-spotlight"); spotlightEl = null; }
   tutorialTooltip.style.opacity = "0";
   onboarding.style.opacity = "0";
+  blurOverlay.style.display = "none";
   setTimeout(() => { onboarding.style.display = "none"; onboarding.style.background = ""; }, 500);
 }
 

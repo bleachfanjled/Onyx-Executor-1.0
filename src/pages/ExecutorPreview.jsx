@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import indexHtmlUrl from "./onyx-assets/index.html.txt?raw";
 import rendererJsUrl from "./onyx-assets/renderer.js.txt?raw";
 import AIAssistant from "@/components/onyx/AIAssistant";
@@ -20,6 +20,28 @@ const srcDocPromise = Promise.all([
 export default function ExecutorPreview() {
   const [srcDoc, setSrcDoc] = useState("");
   const [aiOpen, setAiOpen] = useState(false);
+  const iframeRef = useRef(null);
+
+  const getEditorContent = useCallback(() => {
+    return new Promise((resolve) => {
+      const handler = (event) => {
+        if (event.data?.type === "onyx-editor-content") {
+          window.removeEventListener("message", handler);
+          resolve(event.data.content || "");
+        }
+      };
+      window.addEventListener("message", handler);
+      iframeRef.current?.contentWindow?.postMessage({ type: "onyx-get-editor-content" }, "*");
+      setTimeout(() => {
+        window.removeEventListener("message", handler);
+        resolve("");
+      }, 3000);
+    });
+  }, []);
+
+  const applyCode = useCallback((code) => {
+    iframeRef.current?.contentWindow?.postMessage({ type: "onyx-apply-code", code }, "*");
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -40,9 +62,10 @@ export default function ExecutorPreview() {
 
   return (
     <div className="bg-obsidian relative" style={{ backgroundColor: "#050505", paddingTop: "56px", height: "100vh" }}>
-      <AIAssistant open={aiOpen} onClose={() => setAiOpen(false)} />
+      <AIAssistant open={aiOpen} onClose={() => setAiOpen(false)} getEditorContent={getEditorContent} applyCode={applyCode} />
       {srcDoc ? (
         <iframe
+          ref={iframeRef}
           srcDoc={srcDoc}
           title="Onyx Executor Preview"
           style={{ width: "100%", height: "calc(100vh - 56px)", border: "none", display: "block" }}

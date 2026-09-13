@@ -388,6 +388,20 @@ document.addEventListener("click", (event) => {
   }
 });
 
+// === AI ASSISTANT COMMUNICATION ===
+window.addEventListener("message", (event) => {
+  if (!event.data) return;
+  if (event.data.type === "onyx-get-editor-content") {
+    event.source?.postMessage({ type: "onyx-editor-content", content: editor.value }, "*");
+  }
+  if (event.data.type === "onyx-apply-code") {
+    editor.value = event.data.code;
+    saveActiveTabContent();
+    log("Code applied from AI assistant.", "#4ADE80");
+    showNotification("Code applied from AI");
+  }
+});
+
 // === ONBOARDING SYSTEM ===
 const onboarding = document.getElementById("onboarding");
 const blurTop = document.getElementById("blurTop");

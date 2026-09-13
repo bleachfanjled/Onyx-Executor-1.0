@@ -356,9 +356,16 @@ export default function DownloadPage() {
             </button>
           </div>
 
+          {/* macOS size */}
+          <p
+            className="font-heading text-white mb-2 mt-10"
+            style={{ fontWeight: 700, fontSize: "clamp(20px, 3vw, 30px)", letterSpacing: "-0.03em" }}
+          >
+            331 MB
+          </p>
           {/* macOS label */}
-          <p className="font-mono text-xs mt-10 mb-4" style={{ color: "#959595", letterSpacing: "0.1em" }}>
-            MACOS · .ZIP{macRelease ? ` · ${macRelease.sizeMb} MB` : ""}
+          <p className="font-mono text-xs mb-6" style={{ color: "#959595", letterSpacing: "0.1em" }}>
+            MACOS · .ZIP
           </p>
 
           {/* Download Button — macOS */}

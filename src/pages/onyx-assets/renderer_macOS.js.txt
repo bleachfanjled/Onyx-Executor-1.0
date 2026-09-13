@@ -73,13 +73,7 @@ function setStatus(text, active = false) {
 
 function syncAttachButton() {
   if (!attachButton) return;
-  attachButton.textContent = clientAttached ? "Kill Roblox" : "Attach";
-  attachButton.classList.toggle("bg-[#FF3B30]", clientAttached);
-  attachButton.classList.toggle("text-black", clientAttached);
-  attachButton.classList.toggle("text-[#959595]", !clientAttached);
-  attachButton.classList.toggle("border-[#FF3B30]", clientAttached);
-  attachButton.classList.toggle("hover:bg-[#FF5A4F]", clientAttached);
-  attachButton.classList.toggle("hover:text-white", clientAttached);
+  attachButton.textContent = "Kill Roblox";
 }
 
 function getActiveTab() {
@@ -215,19 +209,17 @@ function closeTab(tabId) {
   renderTabs();
 }
 
-async function handleAttachToggle() {
-  const res = window.onyx ? await window.onyx.attachToggle(clientAttached) : null;
+async function handleKillRoblox() {
+  const res = window.onyx ? await window.onyx.killRoblox() : null;
   if (res) {
     applyBackendResult(res);
-    showNotification(res.attached ? "Roblox Client Attached" : "Roblox Processes Terminated");
+    showNotification("Roblox Processes Terminated");
     return;
   }
-  // Fallback (native backend not built yet): toggle locally so the UI still works.
-  clientAttached = !clientAttached;
-  log(clientAttached ? "Roblox Client Attached" : "Roblox Processes Terminated", "#FFFFFF");
-  setStatus(clientAttached ? "Attached" : "Idle", clientAttached);
-  showNotification(clientAttached ? "Roblox Client Attached" : "Roblox Processes Terminated");
-  syncAttachButton();
+  // Fallback (native backend not built yet): log only.
+  log("Roblox Processes Terminated", "#FFFFFF");
+  setStatus("Idle", false);
+  showNotification("Roblox Processes Terminated");
 }
 
 async function handleExecute() {

@@ -5,6 +5,7 @@
 
 const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
+const { execSync } = require("child_process");
 
 // Set the AppUserModelID so Windows groups the window correctly on the
 // taskbar and the pinned shortcut resolves to the installed Onyx.exe
@@ -87,8 +88,26 @@ ipcMain.on("window-maximize", () => {
   else mainWindow.maximize();
 });
 
-// ---- C++ backend IPC (renderer -> main -> native addon) ----
-ipcMain.handle("onyx:attach-toggle", () => (onyxNative ? onyxNative.attachToggle() : null));
+// ---- Kill Roblox ----
+// Terminate every running process whose name contains "Roblox" (launcher
+// "Roblox", game client "RobloxPlayerBeta", helpers). This is a Windows
+// taskkill via PowerShell — it lists processes by name and force-terminates
+// them; it does NOT read Roblox memory or inject into it.
+ipcMain.handle("onyx:kill-roblox", () => {
+  try {
+    execSync(
+      'powershell -NoProfile -Command "Get-Process | Where-Object { $_.ProcessName -like \'*Roblox*\' } | Stop-Process -Force"',
+      { stdio: "ignore" }
+    );
+  } catch (err) {
+    // PowerShell unavailable or nothing matched — non-fatal.
+  }
+  return {
+    lines: [{ text: "[ ONYX ] Roblox Processes Terminated", color: "#FFFFFF" }],
+    status: { text: "Idle", active: false },
+    attached: false,
+  };
+});
 
 ipcMain.handle("onyx:execute", (_e, script) =>
   onyxNative ? onyxNative.execute(String(script || "")) : null

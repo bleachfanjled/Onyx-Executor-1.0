@@ -17,7 +17,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
 // C++ backend bridge — renderer calls these; main process forwards to onyx.node
 contextBridge.exposeInMainWorld("onyx", {
-  attachToggle: () => ipcRenderer.invoke("onyx:attach-toggle"),
+  killRoblox: () => ipcRenderer.invoke("onyx:kill-roblox"),
   execute: (script) => ipcRenderer.invoke("onyx:execute", script),
   loadFile: () => ipcRenderer.invoke("onyx:load-file"),
   saveFile: (content) => ipcRenderer.invoke("onyx:save-file", content),

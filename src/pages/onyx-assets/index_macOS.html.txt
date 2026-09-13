@@ -61,8 +61,8 @@
         Execute
       </button>
 
-      <button id="attachButton" onclick="handleAttachToggle()" class="h-9 px-4 border border-[#1A1A1A] text-[#959595] text-[10px] uppercase tracking-widest hover:text-white hover:border-[#3A3A3A] transition-all">
-        Attach
+      <button id="attachButton" onclick="handleKillRoblox()" class="h-9 px-4 border border-[#FF3B30] text-[#FF3B30] text-[10px] uppercase tracking-widest hover:bg-[#FF3B30] hover:text-white transition-all">
+        Kill Roblox
       </button>
 
       <button onclick="handleCopy()" class="h-9 px-4 border border-[#1A1A1A] text-[#959595] text-[10px] uppercase tracking-widest hover:text-white hover:border-[#3A3A3A] transition-all">

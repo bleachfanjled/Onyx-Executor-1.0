@@ -84,51 +84,40 @@ ipcMain.on("window-maximize", () => {
   else mainWindow.maximize();
 });
 
-// ---- C++ backend IPC (renderer -> main -> native addon) ----
-// On macOS there is no real process attach (no injection). The "Attach" click
-// just flips the UI into the attached state; the "Kill Roblox" click actually
-// terminates the Roblox process(es) — equivalent to macOS Force Quit. This runs
-// in the main process via Node, so it works even without the native addon built.
-ipcMain.handle("onyx:attach-toggle", (_e, currentlyAttached) => {
-  if (currentlyAttached) {
-    // Force-quit Roblox: enumerate running processes whose name matches "Roblox"
-    // (launcher "Roblox", game client "RobloxPlayer", helpers) and terminate them.
-    // This is a macOS Force Quit — it lists processes by name and sends a signal;
-    // it does NOT read Roblox memory or inject into it.
-    let killed = 0;
-    try {
-      const out = execSync('pgrep -i "Roblox" 2>/dev/null || true', {
-        encoding: "utf8",
-      });
-      const pids = out
-        .split(/\s+/)
-        .map((s) => parseInt(s, 10))
-        .filter((p) => Number.isFinite(p) && p !== process.pid);
-      for (const pid of pids) {
-        try {
-          process.kill(pid, "SIGTERM");
-          killed++;
-        } catch (e) {
-          // Already gone or no permission — skip.
-        }
+// ---- Kill Roblox ----
+// Force-quit Roblox: enumerate running processes whose name matches "Roblox"
+// (launcher "Roblox", game client "RobloxPlayer", helpers) and terminate them.
+// This is a macOS Force Quit — it lists processes by name and sends a signal;
+// it does NOT read Roblox memory or inject into it. Runs in the main process
+// via Node, so it works even without the native addon built.
+ipcMain.handle("onyx:kill-roblox", () => {
+  let killed = 0;
+  try {
+    const out = execSync('pgrep -i "Roblox" 2>/dev/null || true', {
+      encoding: "utf8",
+    });
+    const pids = out
+      .split(/\s+/)
+      .map((s) => parseInt(s, 10))
+      .filter((p) => Number.isFinite(p) && p !== process.pid);
+    for (const pid of pids) {
+      try {
+        process.kill(pid, "SIGTERM");
+        killed++;
+      } catch (e) {
+        // Already gone or no permission — skip.
       }
-    } catch (err) {
-      // pgrep unavailable or nothing matched — non-fatal.
     }
-    const msg = killed > 0
-      ? `Roblox Processes Terminated (${killed})`
-      : "No Roblox Process Found";
-    return {
-      lines: [{ text: "[ ONYX ] " + msg, color: "#FFFFFF" }],
-      status: { text: "Idle", active: false },
-      attached: false,
-    };
+  } catch (err) {
+    // pgrep unavailable or nothing matched — non-fatal.
   }
-  // Attach: no real attach on macOS — just report the attached state.
+  const msg = killed > 0
+    ? `Roblox Processes Terminated (${killed})`
+    : "No Roblox Process Found";
   return {
-    lines: [{ text: "[ ONYX ] Roblox Client Attached", color: "#FFFFFF" }],
-    status: { text: "Attached", active: true },
-    attached: true,
+    lines: [{ text: "[ ONYX ] " + msg, color: "#FFFFFF" }],
+    status: { text: "Idle", active: false },
+    attached: false,
   };
 });
 

@@ -20,15 +20,31 @@ export default async function(req) {
     }
 
     const releases = await res.json();
-    const release = releases.find(r => !r.draft) || releases[0];
+    if (!Array.isArray(releases) || releases.length === 0) {
+      return Response.json({ error: "No release found" }, { status: 404 });
+    }
+
+    // Sort by created_at descending so the newest release is first
+    const sorted = [...releases].sort((a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    // Pick the newest non-draft release
+    const release = sorted.find(r => !r.draft) || sorted[0];
     if (!release) {
       return Response.json({ error: "No release found" }, { status: 404 });
     }
 
-    const asset = (release.assets || [])[0];
-    if (!asset) {
+    const assets = release.assets || [];
+    if (assets.length === 0) {
       return Response.json({ error: "No downloadable asset found on the release" }, { status: 404 });
     }
+
+    // Prefer the largest .exe asset; fall back to the largest asset overall
+    const exes = assets.filter(a => a.name.toLowerCase().endsWith(".exe"));
+    const pool = exes.length > 0 ? exes : assets;
+    const asset = pool.reduce((best, cur) =>
+      !best || (cur.size || 0) > (best.size || 0) ? cur : best, null);
 
     return Response.json({
       downloadUrl: asset.browser_download_url,

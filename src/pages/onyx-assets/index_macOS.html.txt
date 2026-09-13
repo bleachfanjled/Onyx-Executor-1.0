@@ -20,7 +20,7 @@
     @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
     @keyframes statusPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); } 50% { box-shadow: 0 0 0 4px rgba(255,255,255,0); } }
     @keyframes checkmark { from { stroke-dashoffset: 50; } to { stroke-dashoffset: 0; } }
-    @keyframes spotlightPulse { 0%, 100% { box-shadow: 0 0 0 2px rgba(255,255,255,0.15); } 50% { box-shadow: 0 0 0 3px rgba(255,255,255,0.35); } }
+    @keyframes spotlightPulse { 0%, 100% { outline-color: rgba(255,255,255,0.15); } 50% { outline-color: rgba(255,255,255,0.4); } }
     @keyframes floatLogo { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
     @keyframes fadeInStagger { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes glowRing { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.8; } }
@@ -54,7 +54,7 @@
     .status-active { animation: statusPulse 2s ease-in-out infinite; }
 
     /* === SPOTLIGHT === */
-    .onyx-spotlight { position: relative !important; z-index: 201 !important; animation: spotlightPulse 2s ease-in-out infinite !important; }
+    .onyx-spotlight { position: relative !important; z-index: 201 !important; outline: 2px solid rgba(255,255,255,0.15); outline-offset: 3px; animation: spotlightPulse 2s ease-in-out infinite !important; }
     #blurTop, #blurBottom, #blurLeft, #blurRight { position: fixed; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); background: rgba(5,5,5,0.6); pointer-events: none; display: none; }
 
     /* === TOAST === */

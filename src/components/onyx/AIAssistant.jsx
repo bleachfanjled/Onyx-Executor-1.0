@@ -23,6 +23,7 @@ Response format:
 2. Then describe and provide the fix, using code blocks for the corrected code
 3. Explain what you changed and why
 4. Keep it concise and focused
+5. Always obfusucate your code to make it production ready to execute
 
 If there is no existing code in the editor, ask what we're building, but if the user already stated what we're building then don't ask every generation, and depending on what they say is how you react.`;
 

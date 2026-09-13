@@ -553,6 +553,7 @@ document.addEventListener("click", (event) => {
 const onboarding = document.getElementById("onboarding");
 const blurOverlay = document.getElementById("blurOverlay");
 const verifyScreen = document.getElementById("verifyScreen");
+const blockedScreen = document.getElementById("blockedScreen");
 const welcomeScreen = document.getElementById("welcomeScreen");
 const tutorialTooltip = document.getElementById("tutorialTooltip");
 const verifyProgress = document.getElementById("verifyProgress");
@@ -598,16 +599,22 @@ function initOnboarding() {
 
 function startVerification() {
   const steps = [
-    { text: "Initializing verification...", progress: 0.25 },
-    { text: "Computing SHA-256 hash...", progress: 0.50 },
-    { text: "Checking digital signature...", progress: 0.75 },
-    { text: "Integrity verified.", progress: 1.0 },
+    { text: "Initializing malware scan...", progress: 0.25 },
+    { text: "Scanning for threats...", progress: 0.50 },
+    { text: "Verifying file signatures...", progress: 0.75 },
+    { text: "Scan complete — no threats found.", progress: 1.0 },
   ];
   let i = 0;
   function next() {
     if (i >= steps.length) {
       verifyCheck.style.animation = "checkmark 0.4s ease-out forwards";
-      setTimeout(showWelcome, 800);
+      setTimeout(async () => {
+        let scanPassed = true;
+        if (window.onyx && window.onyx.verifyIntegrity) {
+          try { scanPassed = await window.onyx.verifyIntegrity(); } catch { scanPassed = false; }
+        }
+        scanPassed ? showWelcome() : showBlocked();
+      }, 800);
       return;
     }
     verifyStatus.textContent = steps[i].text;
@@ -616,6 +623,15 @@ function startVerification() {
     setTimeout(next, 550);
   }
   next();
+}
+
+function showBlocked() {
+  verifyScreen.style.opacity = "0";
+  setTimeout(() => {
+    verifyScreen.style.display = "none";
+    blockedScreen.style.display = "flex";
+    requestAnimationFrame(() => { blockedScreen.style.opacity = "1"; });
+  }, 400);
 }
 
 function showWelcome() {

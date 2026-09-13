@@ -161,12 +161,28 @@
         </div>
       </div>
       <div class="text-center">
-        <h2 class="text-white text-sm font-bold uppercase tracking-[0.3em] mb-2">Verifying Integrity</h2>
+        <h2 class="text-white text-sm font-bold uppercase tracking-[0.3em] mb-2">Malware Scan</h2>
         <p id="verifyStatus" class="text-[#959595] text-xs">Initializing...</p>
       </div>
       <div class="w-48 h-px bg-[#1A1A1A] overflow-hidden relative">
         <div class="scan-line absolute inset-0"></div>
       </div>
+    </div>
+
+    <!-- Blocked Screen -->
+    <div id="blockedScreen" class="hidden flex-col items-center gap-8 opacity-0 transition-all duration-500">
+      <div class="w-20 h-20 border border-[#FF3B30] flex items-center justify-center" style="animation: scaleIn 0.5s ease-out;">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <path d="M18 5 L33 30 H3 Z" stroke="#FF3B30" stroke-width="2" fill="none" stroke-linejoin="round" />
+          <line x1="18" y1="15" x2="18" y2="22" stroke="#FF3B30" stroke-width="2" stroke-linecap="round" />
+          <circle cx="18" cy="26" r="1.5" fill="#FF3B30" />
+        </svg>
+      </div>
+      <div class="text-center">
+        <h2 class="text-[#FF3B30] text-sm font-bold uppercase tracking-[0.3em] mb-3">Threat Detected</h2>
+        <p class="text-[#959595] text-xs max-w-xs leading-relaxed">A malicious modification or virus was detected. Onyx has been blocked from running to protect your system.</p>
+      </div>
+      <button onclick="window.close()" class="premium-btn px-8 py-3 border border-[#FF3B30] text-[#FF3B30] text-[10px] uppercase tracking-[0.2em] font-bold hover:bg-[#FF3B30] hover:text-white transition-all">Close Application</button>
     </div>
 
     <!-- Welcome Screen -->
@@ -198,13 +214,13 @@
             </div>
             <span class="text-[#3A3A3A] text-[9px] uppercase tracking-widest">Verified</span>
           </div>
-          <div class="premium-card flex items-center justify-between p-3 border border-[#1A1A1A]">
+          <a href="https://github.com/bleachfanjled/Onyx-Executor-Windows/releases/tag/Onyx" target="_blank" class="premium-card flex items-center justify-between p-3 border border-[#1A1A1A]">
             <div>
               <p class="text-white text-xs font-medium">Official GitHub</p>
-              <p class="text-[#959595] text-[10px]">github.com/Onyx-Executor</p>
+              <p class="text-[#959595] text-[10px]">github.com/bleachfanjled/Onyx-Executor-Windows</p>
             </div>
             <span class="text-[#3A3A3A] text-[9px] uppercase tracking-widest">Verified</span>
-          </div>
+          </a>
         </div>
         <div class="mt-4 pt-4 border-t border-[#1A1A1A]">
           <p class="text-[#959595] text-[10px] leading-relaxed">Always verify the SHA-256 hash before running. Onyx will never ask for your password or login credentials.</p>

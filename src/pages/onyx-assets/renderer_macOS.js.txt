@@ -527,11 +527,13 @@ function showTutorialStep(step) {
   spotlightEl = target;
   target.classList.add("onyx-spotlight");
   const rect = target.getBoundingClientRect();
+  const pad = 10;
+  const t = rect.top - pad, b = rect.bottom + pad, l = rect.left - pad, r = rect.right + pad;
   const bs = "position:fixed;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);background:rgba(5,5,5,0.6);pointer-events:none;display:block;";
-  blurTop.style.cssText = bs + "top:0;left:0;width:100%;height:" + rect.top + "px;";
-  blurBottom.style.cssText = bs + "top:" + rect.bottom + "px;left:0;width:100%;height:" + (window.innerHeight - rect.bottom) + "px;";
-  blurLeft.style.cssText = bs + "top:" + rect.top + "px;left:0;width:" + rect.left + "px;height:" + (rect.bottom - rect.top) + "px;";
-  blurRight.style.cssText = bs + "top:" + rect.top + "px;left:" + rect.right + "px;width:" + (window.innerWidth - rect.right) + "px;height:" + (rect.bottom - rect.top) + "px;";
+  blurTop.style.cssText = bs + "top:0;left:0;width:100%;height:" + t + "px;";
+  blurBottom.style.cssText = bs + "top:" + b + "px;left:0;width:100%;height:" + (window.innerHeight - b) + "px;";
+  blurLeft.style.cssText = bs + "top:" + t + "px;left:0;width:" + l + "px;height:" + (b - t) + "px;";
+  blurRight.style.cssText = bs + "top:" + t + "px;left:" + r + "px;width:" + (window.innerWidth - r) + "px;height:" + (b - t) + "px;";
   tutorialTooltip.style.display = "block";
   tutorialStepNum.textContent = `Step ${step + 1} / ${tutorialSteps.length}`;
   tutorialTitle.textContent = stepData.title;

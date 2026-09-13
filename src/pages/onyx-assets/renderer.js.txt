@@ -630,6 +630,7 @@ function startTutorial() {
   welcomeScreen.style.opacity = "0";
   setTimeout(() => {
     welcomeScreen.style.display = "none";
+    onboarding.style.background = "transparent";
     showTutorialStep(0);
   }, 400);
 }
@@ -678,7 +679,7 @@ function closeOnboarding() {
   if (spotlightEl) { spotlightEl.classList.remove("onyx-spotlight"); spotlightEl = null; }
   tutorialTooltip.style.opacity = "0";
   onboarding.style.opacity = "0";
-  setTimeout(() => { onboarding.style.display = "none"; }, 500);
+  setTimeout(() => { onboarding.style.display = "none"; onboarding.style.background = ""; }, 500);
 }
 
 startTutorialBtn.addEventListener("click", startTutorial);

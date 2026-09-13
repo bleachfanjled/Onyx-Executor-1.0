@@ -1,7 +1,9 @@
 // =============================================================================
 // ONYX EXECUTOR — preload.js
-// Bridges IPC to the renderer via window.electronAPI.
-// index.html calls window.electronAPI.minimize() / .close() — this defines them.
+// Bridges IPC to the renderer:
+//   window.electronAPI.minimize() / .close()   -> window controls
+//   window.onyx.attachToggle() / execute() / loadFile() / saveFile()
+//     -> C++ backend (onyx.node) via main process IPC
 // =============================================================================
 
 const { contextBridge, ipcRenderer } = require("electron");
@@ -9,4 +11,12 @@ const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("electronAPI", {
   minimize: () => ipcRenderer.send("window-minimize"),
   close: () => ipcRenderer.send("window-close"),
+});
+
+// C++ backend bridge — renderer calls these; main process forwards to onyx.node
+contextBridge.exposeInMainWorld("onyx", {
+  attachToggle: () => ipcRenderer.invoke("onyx:attach-toggle"),
+  execute: (script) => ipcRenderer.invoke("onyx:execute", script),
+  loadFile: () => ipcRenderer.invoke("onyx:load-file"),
+  saveFile: (content) => ipcRenderer.invoke("onyx:save-file", content),
 });

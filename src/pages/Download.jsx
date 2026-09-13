@@ -303,7 +303,7 @@ export default function DownloadPage() {
             {fileSize}
           </p>
           <p className="font-mono text-xs mb-6" style={{ color: "#959595", letterSpacing: "0.1em" }}>
-            WINDOWS · .ZIP
+            WINDOWS · .ZIP ·.EXE
           </p>
 
           {/* Download Button — Windows */}

@@ -385,7 +385,145 @@ document.addEventListener("click", (event) => {
   }
 });
 
+// === ONBOARDING SYSTEM ===
+const onboarding = document.getElementById("onboarding");
+const verifyScreen = document.getElementById("verifyScreen");
+const welcomeScreen = document.getElementById("welcomeScreen");
+const tutorialTooltip = document.getElementById("tutorialTooltip");
+const verifyProgress = document.getElementById("verifyProgress");
+const verifyCheck = document.getElementById("verifyCheck");
+const verifyStatus = document.getElementById("verifyStatus");
+const startTutorialBtn = document.getElementById("startTutorialBtn");
+const skipTutorialBtn = document.getElementById("skipTutorialBtn");
+const tutorialTitle = document.getElementById("tutorialTitle");
+const tutorialDesc = document.getElementById("tutorialDesc");
+const tutorialStepNum = document.getElementById("tutorialStepNum");
+const tutorialDots = document.getElementById("tutorialDots");
+const tutorialNext = document.getElementById("tutorialNext");
+const tutorialBack = document.getElementById("tutorialBack");
+const tutorialSkip = document.getElementById("tutorialSkip");
+
+let currentStep = 0;
+let spotlightEl = null;
+
+const isMac = true;
+
+const tutorialSteps = [
+  { target: "#scriptEditor", title: "Script Editor", desc: "Write and edit your Lua scripts here. The editor supports multi-line editing and auto-saves content to your active tab." },
+  { target: "#tabs", title: "Script Tabs", desc: "Manage multiple scripts simultaneously. Click + to add a tab, double-click a tab name to rename it, right-click for more options." },
+  { target: 'button[onclick="handleExecute()"]', title: "Execute", desc: "Runs the script in your active tab. Make sure to Attach to Roblox first before executing any script." },
+  { target: "#attachButton", title: "Attach", desc: "Connects Onyx to the Roblox process. This is required before you can execute any scripts." },
+  { target: 'button[onclick="handleKillRoblox()"]', title: "Kill Roblox", desc: "Force-terminates all Roblox processes. Use this if something goes wrong or you need a clean restart." },
+  { target: 'button[onclick="handleCopy()"]', title: "Copy", desc: "Copies the active script to your system clipboard for easy sharing or backup." },
+  { target: 'button[onclick="handleLoad()"]', title: "Load", desc: "Open a .lua, .txt, or .luac script file from your computer directly into the editor." },
+  { target: 'button[onclick="handleDownload()"]', title: "Save", desc: "Saves your active script as a .lua file to your computer." },
+  { target: 'button[onclick="handleClear()"]', title: "Clear", desc: "Clears all content from the editor. Make sure you've saved your script if needed." },
+  { target: "#console", title: "Console", desc: "View execution logs, status messages, and error reports here in real time as you work." },
+  { target: "#statusText", title: "Status Indicator", desc: "Shows your current connection state — Idle (disconnected) or Attached (connected to Roblox)." },
+  { target: "#titleBar", title: "Window Controls", desc: "Use the native macOS traffic light buttons (red, yellow, green) in the top-left corner to close, minimize, or fullscreen Onyx." },
+];
+
+function initOnboarding() {
+  onboarding.style.opacity = "1";
+  verifyScreen.style.opacity = "1";
+  startVerification();
+}
+
+function startVerification() {
+  const steps = [
+    { text: "Initializing verification...", progress: 0.25 },
+    { text: "Computing SHA-256 hash...", progress: 0.50 },
+    { text: "Checking digital signature...", progress: 0.75 },
+    { text: "Integrity verified.", progress: 1.0 },
+  ];
+  let i = 0;
+  function next() {
+    if (i >= steps.length) {
+      verifyCheck.style.animation = "checkmark 0.4s ease-out forwards";
+      setTimeout(showWelcome, 800);
+      return;
+    }
+    verifyStatus.textContent = steps[i].text;
+    verifyProgress.style.strokeDashoffset = 226 * (1 - steps[i].progress);
+    i++;
+    setTimeout(next, 550);
+  }
+  next();
+}
+
+function showWelcome() {
+  verifyScreen.style.opacity = "0";
+  setTimeout(() => {
+    verifyScreen.style.display = "none";
+    welcomeScreen.style.display = "flex";
+    requestAnimationFrame(() => { welcomeScreen.style.opacity = "1"; });
+  }, 400);
+}
+
+function startTutorial() {
+  welcomeScreen.style.opacity = "0";
+  setTimeout(() => {
+    welcomeScreen.style.display = "none";
+    showTutorialStep(0);
+  }, 400);
+}
+
+function renderDots() {
+  tutorialDots.innerHTML = "";
+  tutorialSteps.forEach((_, idx) => {
+    const dot = document.createElement("div");
+    dot.style.cssText = "width:4px;height:4px;border-radius:50%;transition:all 0.3s;";
+    dot.style.background = idx === currentStep ? "#FFFFFF" : "#3A3A3A";
+    dot.style.width = idx === currentStep ? "16px" : "4px";
+    dot.style.borderRadius = idx === currentStep ? "2px" : "50%";
+    tutorialDots.appendChild(dot);
+  });
+}
+
+function showTutorialStep(step) {
+  currentStep = step;
+  if (step >= tutorialSteps.length) { closeOnboarding(); return; }
+  if (spotlightEl) { spotlightEl.classList.remove("onyx-spotlight"); spotlightEl = null; }
+  const stepData = tutorialSteps[step];
+  const target = document.querySelector(stepData.target);
+  if (!target) { showTutorialStep(step + 1); return; }
+  spotlightEl = target;
+  target.classList.add("onyx-spotlight");
+  const rect = target.getBoundingClientRect();
+  tutorialTooltip.style.display = "block";
+  tutorialStepNum.textContent = `Step ${step + 1} / ${tutorialSteps.length}`;
+  tutorialTitle.textContent = stepData.title;
+  tutorialDesc.textContent = stepData.desc;
+  renderDots();
+  const tooltipW = 320;
+  let left = rect.left + rect.width / 2 - tooltipW / 2;
+  let top = rect.bottom + 16;
+  left = Math.max(16, Math.min(left, window.innerWidth - tooltipW - 16));
+  if (top + 220 > window.innerHeight) { top = Math.max(16, rect.top - 220); }
+  tutorialTooltip.style.left = `${left}px`;
+  tutorialTooltip.style.top = `${top}px`;
+  requestAnimationFrame(() => { tutorialTooltip.style.opacity = "1"; });
+  tutorialBack.style.opacity = step === 0 ? "0.3" : "1";
+  tutorialBack.style.pointerEvents = step === 0 ? "none" : "auto";
+  tutorialNext.textContent = step === tutorialSteps.length - 1 ? "Finish ✓" : "Next →";
+}
+
+function closeOnboarding() {
+  if (spotlightEl) { spotlightEl.classList.remove("onyx-spotlight"); spotlightEl = null; }
+  tutorialTooltip.style.opacity = "0";
+  onboarding.style.opacity = "0";
+  setTimeout(() => { onboarding.style.display = "none"; }, 500);
+}
+
+startTutorialBtn.addEventListener("click", startTutorial);
+skipTutorialBtn.addEventListener("click", closeOnboarding);
+tutorialSkip.addEventListener("click", closeOnboarding);
+tutorialNext.addEventListener("click", () => showTutorialStep(currentStep + 1));
+tutorialBack.addEventListener("click", () => showTutorialStep(currentStep - 1));
+
 selectedTabId = state.tabs[0].id;
 editor.value = state.tabs[0].content;
 renderTabs();
 syncAttachButton();
+
+initOnboarding();

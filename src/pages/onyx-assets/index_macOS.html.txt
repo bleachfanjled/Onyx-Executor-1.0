@@ -8,43 +8,80 @@
   <style>
     * { -webkit-app-region: no-drag; }
     .drag { -webkit-app-region: drag; }
-    body { margin: 0; overflow: hidden; background: #050505; }
+    body { margin: 0; overflow: hidden; background: #050505; font-family: 'JetBrains Mono', ui-monospace, monospace; }
     textarea { caret-color: white; }
     textarea::placeholder { color: #2a2a2a; }
-    #toast {
-      opacity: 0;
-      transform: translateY(-8px);
-      transition: opacity 220ms ease, transform 220ms ease, filter 220ms ease;
-      filter: blur(4px);
-    }
-    #toast.visible {
-      opacity: 1;
-      transform: translateY(0);
-      filter: blur(0);
-    }
-    #toast.hidden {
-      opacity: 0;
-      transform: translateY(-8px);
-      filter: blur(6px);
-    }
+
+    /* === PREMIUM ANIMATIONS === */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes scaleIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+    @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+    @keyframes statusPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); } 50% { box-shadow: 0 0 0 4px rgba(255,255,255,0); } }
+    @keyframes checkmark { from { stroke-dashoffset: 50; } to { stroke-dashoffset: 0; } }
+    @keyframes spotlightPulse { 0%, 100% { box-shadow: 0 0 0 9999px rgba(5,5,5,0.88), 0 0 0 0px rgba(255,255,255,0.15); } 50% { box-shadow: 0 0 0 9999px rgba(5,5,5,0.88), 0 0 0 3px rgba(255,255,255,0.35); } }
+    @keyframes floatLogo { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes fadeInStagger { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes glowRing { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.8; } }
+
+    /* === GLASS === */
+    .glass { background: rgba(13,13,13,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.06); }
+
+    /* === PREMIUM BUTTONS === */
+    .premium-btn { position: relative; overflow: hidden; transition: all 0.25s cubic-bezier(0.4,0,0.2,1); }
+    .premium-btn::after { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.12) 50%, transparent 70%); transform: translateX(-100%); transition: transform 0.6s ease; }
+    .premium-btn:hover::after { transform: translateX(100%); }
+
+    /* === CARDS === */
+    .premium-card { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
+    .premium-card:hover { border-color: rgba(255,255,255,0.2); transform: translateY(-1px); }
+
+    /* === ANIMATED ENTRANCE === */
+    .anim-titlebar { animation: slideDown 0.4s ease-out 0s both; }
+    .anim-tabs { animation: slideDown 0.4s ease-out 0.08s both; }
+    .anim-editor { animation: scaleIn 0.5s ease-out 0.12s both; }
+    .anim-console { animation: slideUp 0.4s ease-out 0.2s both; }
+    .anim-actions { animation: slideUp 0.4s ease-out 0.26s both; }
+    .anim-btn-1 { animation: fadeInStagger 0.4s ease-out 0.32s both; }
+    .anim-btn-2 { animation: fadeInStagger 0.4s ease-out 0.36s both; }
+    .anim-btn-3 { animation: fadeInStagger 0.4s ease-out 0.4s both; }
+    .anim-btn-4 { animation: fadeInStagger 0.4s ease-out 0.44s both; }
+    .anim-btn-5 { animation: fadeInStagger 0.4s ease-out 0.48s both; }
+    .anim-btn-6 { animation: fadeInStagger 0.4s ease-out 0.52s both; }
+
+    /* === STATUS === */
+    .status-active { animation: statusPulse 2s ease-in-out infinite; }
+
+    /* === SPOTLIGHT === */
+    .onyx-spotlight { position: relative !important; z-index: 201 !important; animation: spotlightPulse 2s ease-in-out infinite !important; }
+
+    /* === TOAST === */
+    #toast { opacity: 0; transform: translateY(-8px); transition: opacity 220ms ease, transform 220ms ease, filter 220ms ease; filter: blur(4px); }
+    #toast.visible { opacity: 1; transform: translateY(0); filter: blur(0); }
+    #toast.hidden { opacity: 0; transform: translateY(-8px); filter: blur(6px); }
+
+    /* === ONBOARDING === */
+    #onboarding { transition: opacity 0.5s ease; }
+    .verify-check { stroke-dasharray: 50; stroke-dashoffset: 50; }
+    .logo-glow { animation: floatLogo 3s ease-in-out infinite; filter: drop-shadow(0 0 20px rgba(255,255,255,0.1)); }
+    .glow-ring { animation: glowRing 2s ease-in-out infinite; }
+    .scan-line { background: linear-gradient(90deg, transparent, #FFFFFF, transparent); animation: shimmer 1.5s linear infinite; }
   </style>
 </head>
 <body>
-  <div class="w-screen h-screen bg-[#050505] border border-[#1A1A1A] flex flex-col font-mono text-white select-none">
+  <div class="w-screen h-screen bg-[#050505] border border-[#1A1A1A] flex flex-col text-white select-none">
 
-    <!-- macOS: native traffic-light controls are drawn by the OS on the left
-         inset (hiddenInset title bar). Hide the custom window controls and
-         pad the title bar so the ONYX label clears the traffic lights. -->
-    <div id="titleBar" class="drag h-10 border-b border-[#1A1A1A] flex items-center justify-between shrink-0" style="padding-left:80px; padding-right:16px;">
+    <div id="titleBar" class="drag anim-titlebar h-10 border-b border-[#1A1A1A] flex items-center justify-between shrink-0" style="padding-left:80px; padding-right:16px;">
       <span class="text-[10px] tracking-[0.2em] text-[#959595]">ONYX // V1.0</span>
     </div>
 
-    <div class="h-10 border-b border-[#1A1A1A] flex items-center px-2 gap-2 shrink-0">
+    <div class="anim-tabs h-10 border-b border-[#1A1A1A] flex items-center px-2 gap-2 shrink-0">
       <div id="tabs" class="flex-1 flex items-center gap-2 overflow-x-auto"></div>
       <button id="newTabButton" class="h-7 w-7 border border-[#1A1A1A] text-[#959595] text-lg leading-none hover:text-white hover:border-[#3A3A3A] transition-all">+</button>
     </div>
 
-    <div class="flex-1 p-3 overflow-hidden">
+    <div class="anim-editor flex-1 p-3 overflow-hidden">
       <textarea
         id="scriptEditor"
         class="w-full h-full bg-[#0D0D0D] border border-[#1A1A1A] p-4 text-[13px] text-[#959595] focus:outline-none focus:border-[#3A3A3A] resize-none transition-all"
@@ -52,53 +89,125 @@
       ></textarea>
     </div>
 
-    <div class="h-24 mx-3 mb-3 bg-[#0D0D0D] border border-[#1A1A1A] overflow-y-auto p-3">
+    <div class="anim-console h-24 mx-3 mb-3 bg-[#0D0D0D] border border-[#1A1A1A] overflow-y-auto p-3">
       <p id="console" class="text-[11px] text-[#3A3A3A]">[ ONYX ] Ready.</p>
     </div>
 
-    <div class="h-14 border-t border-[#1A1A1A] flex items-center px-4 gap-2 shrink-0">
-      <button onclick="handleExecute()" class="h-9 px-6 bg-white text-black font-bold text-[10px] uppercase tracking-widest hover:bg-[#E0E0E0] transition-all">
-        Execute
-      </button>
-
-      <button id="attachButton" onclick="handleAttach()" class="h-9 px-4 border border-[#3B82F6] text-[#3B82F6] text-[10px] uppercase tracking-widest hover:bg-[#3B82F6] hover:text-white transition-all">
-        Attach
-      </button>
-
-      <button onclick="handleKillRoblox()" class="h-9 px-4 border border-[#FF3B30] text-[#FF3B30] text-[10px] uppercase tracking-widest hover:bg-[#FF3B30] hover:text-white transition-all">
-        Kill Roblox
-      </button>
-
-      <button onclick="handleCopy()" class="h-9 px-4 border border-white text-white text-[10px] uppercase tracking-widest hover:bg-white hover:text-black transition-all">
-        Copy
-      </button>
-
-      <button onclick="handleLoad()" class="h-9 px-4 border border-white text-white text-[10px] uppercase tracking-widest hover:bg-white hover:text-black transition-all">
-        Load
-      </button>
-
-      <button onclick="handleDownload()" class="h-9 px-4 border border-white text-white text-[10px] uppercase tracking-widest hover:bg-white hover:text-black transition-all">
-        Save
-      </button>
-
-      <button onclick="handleClear()" class="h-9 px-4 border border-white text-white text-[10px] uppercase tracking-widest hover:bg-white hover:text-black transition-all">
-        Clear
-      </button>
-
+    <div class="anim-actions h-14 border-t border-[#1A1A1A] flex items-center px-4 gap-2 shrink-0">
+      <button onclick="handleExecute()" class="anim-btn-1 premium-btn h-9 px-6 bg-white text-black font-bold text-[10px] uppercase tracking-widest hover:bg-[#E0E0E0] transition-all">Execute</button>
+      <button id="attachButton" onclick="handleAttach()" class="anim-btn-2 premium-btn h-9 px-4 border border-[#3B82F6] text-[#3B82F6] text-[10px] uppercase tracking-widest hover:bg-[#3B82F6] hover:text-white transition-all">Attach</button>
+      <button onclick="handleKillRoblox()" class="anim-btn-3 premium-btn h-9 px-4 border border-[#FF3B30] text-[#FF3B30] text-[10px] uppercase tracking-widest hover:bg-[#FF3B30] hover:text-white transition-all">Kill Roblox</button>
+      <button onclick="handleCopy()" class="anim-btn-4 premium-btn h-9 px-4 border border-white text-white text-[10px] uppercase tracking-widest hover:bg-white hover:text-black transition-all">Copy</button>
+      <button onclick="handleLoad()" class="anim-btn-5 premium-btn h-9 px-4 border border-white text-white text-[10px] uppercase tracking-widest hover:bg-white hover:text-black transition-all">Load</button>
+      <button onclick="handleDownload()" class="anim-btn-5 premium-btn h-9 px-4 border border-white text-white text-[10px] uppercase tracking-widest hover:bg-white hover:text-black transition-all">Save</button>
+      <button onclick="handleClear()" class="anim-btn-6 premium-btn h-9 px-4 border border-white text-white text-[10px] uppercase tracking-widest hover:bg-white hover:text-black transition-all">Clear</button>
       <div class="ml-auto flex items-center gap-2">
         <div id="statusDot" class="w-1.5 h-1.5 bg-[#3A3A3A]"></div>
         <span id="statusText" class="text-[9px] text-[#959595] uppercase tracking-widest">Idle</span>
       </div>
     </div>
-
   </div>
 
   <div id="contextMenu" class="hidden fixed z-50 min-w-[150px] border border-[#1A1A1A] bg-[#0D0D0D] text-[11px] text-[#959595] shadow-lg">
-    <button data-action="rename" class="block w-full text-left px-3 py-2 hover:bg-[#1A1A1A] hover:text-white">Rename</button>
-    <button data-action="close" class="block w-full text-left px-3 py-2 hover:bg-[#1A1A1A] hover:text-white">Close</button>
+    <button data-action="rename" class="block w-full text-left px-3 py-2 hover:bg-[#1A1A1A] hover:text-white transition-all">Rename</button>
+    <button data-action="close" class="block w-full text-left px-3 py-2 hover:bg-[#1A1A1A] hover:text-white transition-all">Close</button>
   </div>
 
   <div id="toast" class="hidden fixed right-4 top-4 z-50 border border-[#1A1A1A] bg-[#0D0D0D] text-[11px] text-white px-3 py-2 shadow-lg">Roblox Processes Terminated</div>
+
+  <!-- ==================== ONBOARDING OVERLAY ==================== -->
+  <div id="onboarding" class="fixed inset-0 z-[200] bg-[#050505] flex items-center justify-center opacity-0">
+
+    <!-- SHA-256 Verification Screen -->
+    <div id="verifyScreen" class="flex flex-col items-center gap-8 opacity-0 transition-all duration-500">
+      <div class="relative w-20 h-20">
+        <svg class="absolute inset-0 glow-ring" width="80" height="80" viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="36" stroke="#1A1A1A" stroke-width="2" fill="none" />
+          <circle id="verifyProgress" cx="40" cy="40" r="36" stroke="#FFFFFF" stroke-width="2" fill="none" stroke-dasharray="226" stroke-dashoffset="226" transform="rotate(-90 40 40)" stroke-linecap="round" style="transition: stroke-dashoffset 0.5s ease;" />
+        </svg>
+        <div class="absolute inset-0 flex items-center justify-center">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <path d="M14 3 L22 6 V14 C22 19 14 23 14 23 C14 23 6 19 6 14 V6 L14 3Z" stroke="#959595" stroke-width="1.2" fill="none" />
+            <path id="verifyCheck" class="verify-check" d="M10 14 L13 17 L18 11" stroke="#FFFFFF" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+      </div>
+      <div class="text-center">
+        <h2 class="text-white text-sm font-bold uppercase tracking-[0.3em] mb-2">Verifying Integrity</h2>
+        <p id="verifyStatus" class="text-[#959595] text-xs">Initializing...</p>
+      </div>
+      <div class="w-48 h-px bg-[#1A1A1A] overflow-hidden relative">
+        <div class="scan-line absolute inset-0"></div>
+      </div>
+    </div>
+
+    <!-- Welcome Screen -->
+    <div id="welcomeScreen" class="hidden flex-col items-center gap-10 opacity-0 transition-all duration-500">
+      <div class="flex flex-col items-center gap-3">
+        <div class="logo-glow">
+          <div class="w-16 h-16 border border-white/10 flex items-center justify-center bg-[#0D0D0D] relative overflow-hidden">
+            <span class="text-white text-2xl font-black tracking-tighter relative z-10">O</span>
+            <div class="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
+          </div>
+        </div>
+        <h1 class="text-white text-3xl font-black tracking-tighter">ONYX</h1>
+        <p class="text-[#959595] text-[10px] uppercase tracking-[0.3em]">Version 1.0 // Secure Edition</p>
+      </div>
+
+      <div class="w-full max-w-md glass p-6">
+        <div class="flex items-center gap-2 mb-4">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M7 1 L12 3 V7 C12 10 7 12 7 12 C7 12 2 10 2 7 V3 L7 1Z" stroke="#FFFFFF" stroke-width="1" fill="none" />
+            <path d="M5 7 L6.5 8.5 L9.5 5.5" stroke="#FFFFFF" stroke-width="1" fill="none" stroke-linecap="round" />
+          </svg>
+          <h3 class="text-white text-[10px] uppercase tracking-[0.2em] font-bold">Safest Places to Download</h3>
+        </div>
+        <div class="space-y-3">
+          <div class="premium-card flex items-center justify-between p-3 border border-[#1A1A1A]">
+            <div>
+              <p class="text-white text-xs font-medium">Official Website</p>
+              <p class="text-[#959595] text-[10px]">onyx-executor.base44.app</p>
+            </div>
+            <span class="text-[#3A3A3A] text-[9px] uppercase tracking-widest">Verified</span>
+          </div>
+          <div class="premium-card flex items-center justify-between p-3 border border-[#1A1A1A]">
+            <div>
+              <p class="text-white text-xs font-medium">Official GitHub</p>
+              <p class="text-[#959595] text-[10px]">github.com/Onyx-Executor</p>
+            </div>
+            <span class="text-[#3A3A3A] text-[9px] uppercase tracking-widest">Verified</span>
+          </div>
+        </div>
+        <div class="mt-4 pt-4 border-t border-[#1A1A1A]">
+          <p class="text-[#959595] text-[10px] leading-relaxed">Always verify the SHA-256 hash before running. Onyx will never ask for your password or login credentials.</p>
+        </div>
+      </div>
+
+      <div class="flex flex-col items-center gap-3">
+        <button id="startTutorialBtn" class="premium-btn px-8 py-3 bg-white text-black text-[10px] uppercase tracking-[0.2em] font-bold hover:bg-[#E0E0E0] transition-all">Begin Tutorial</button>
+        <button id="skipTutorialBtn" class="text-[#959595] text-[10px] uppercase tracking-[0.2em] hover:text-white transition-all">Skip to Editor →</button>
+      </div>
+    </div>
+
+    <!-- Tutorial Tooltip -->
+    <div id="tutorialTooltip" class="hidden fixed z-[201] opacity-0 transition-all duration-300" style="width: 320px;">
+      <div class="glass p-5">
+        <div class="flex items-center justify-between mb-3">
+          <span id="tutorialStepNum" class="text-[#959595] text-[9px] uppercase tracking-[0.2em]">Step 1 / 12</span>
+          <div class="flex gap-1" id="tutorialDots"></div>
+        </div>
+        <h3 id="tutorialTitle" class="text-white text-sm font-bold mb-2"></h3>
+        <p id="tutorialDesc" class="text-[#959595] text-xs leading-relaxed mb-4"></p>
+        <div class="flex items-center justify-between">
+          <button id="tutorialSkip" class="text-[#959595] text-[9px] uppercase tracking-[0.2em] hover:text-white transition-all">Skip</button>
+          <div class="flex items-center gap-2">
+            <button id="tutorialBack" class="px-4 py-2 border border-[#1A1A1A] text-[#959595] text-[9px] uppercase tracking-[0.2em] hover:border-white hover:text-white transition-all">Back</button>
+            <button id="tutorialNext" class="px-4 py-2 bg-white text-black text-[9px] uppercase tracking-[0.2em] font-bold hover:bg-[#E0E0E0] transition-all">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="renderer_macOS.js"></script>
 </body>

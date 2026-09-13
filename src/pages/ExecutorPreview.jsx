@@ -55,7 +55,7 @@ export default function ExecutorPreview() {
               <circle cx="40" cy="40" r="36" stroke="#FFFFFF" strokeWidth="2" fill="none" strokeDasharray="226" strokeDashoffset="56" strokeLinecap="round" transform="rotate(-90 40 40)" />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-white text-2xl font-black tracking-tighter" style={{ animation: "onyxPulse 1.5s ease-in-out infinite" }}>O</span>
+              <img src="https://media.base44.com/images/public/6a333172d2474d3b422c32ed/8a783d050_ChatGPTImageSep122026at10_10_16PM.png" alt="Onyx" style={{ width: "48px", height: "48px", animation: "onyxPulse 1.5s ease-in-out infinite" }} />
             </div>
           </div>
           <div className="flex flex-col items-center gap-2">

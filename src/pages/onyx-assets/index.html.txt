@@ -205,7 +205,7 @@
       <div class="flex flex-col items-center gap-3">
         <div class="logo-glow">
           <div class="w-16 h-16 border border-white/10 flex items-center justify-center bg-[#0D0D0D] relative overflow-hidden rounded-[14px]" style="box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 24px rgba(0,0,0,0.3);">
-            <span class="text-white text-2xl font-black tracking-tighter relative z-10">O</span>
+            <img src="https://media.base44.com/images/public/6a333172d2474d3b422c32ed/8a783d050_ChatGPTImageSep122026at10_10_16PM.png" alt="Onyx" class="relative z-10" style="width: 40px; height: 40px;" />
             <div class="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
           </div>
         </div>

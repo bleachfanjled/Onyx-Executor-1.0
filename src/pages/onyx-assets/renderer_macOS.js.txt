@@ -73,7 +73,7 @@ function setStatus(text, active = false) {
 
 function syncAttachButton() {
   if (!attachButton) return;
-  attachButton.textContent = "Kill Roblox";
+  attachButton.textContent = clientAttached ? "Detach" : "Attach";
 }
 
 function getActiveTab() {
@@ -207,6 +207,14 @@ function closeTab(tabId) {
   selectedTabId = state.tabs[0].id;
   editor.value = getActiveTab().content;
   renderTabs();
+}
+
+function handleAttach() {
+  clientAttached = !clientAttached;
+  syncAttachButton();
+  setStatus(clientAttached ? "Attached" : "Idle", clientAttached);
+  log(clientAttached ? "Attached to Roblox." : "Detached from Roblox.", "#FFFFFF");
+  showNotification(clientAttached ? "Attached" : "Detached");
 }
 
 async function handleKillRoblox() {

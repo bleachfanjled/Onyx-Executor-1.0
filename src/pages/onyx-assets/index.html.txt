@@ -74,12 +74,16 @@
     </div>
 
     <div class="h-14 border-t border-[#1A1A1A] flex items-center px-4 gap-2 shrink-0">
-      <button onclick="handleExecute()" class="h-9 px-6 bg-white text-black font-bold text-[10px] uppercase tracking-widest hover:bg-[#E0E0E0] transition-all">
-        Execute
+      <button onclick="handleKillRoblox()" class="h-9 px-4 border border-[#FF3B30] text-[#FF3B30] text-[10px] uppercase tracking-widest hover:bg-[#FF3B30] hover:text-white transition-all">
+        Kill Roblox
       </button>
 
-      <button id="attachButton" onclick="handleKillRoblox()" class="h-9 px-4 border border-[#FF3B30] text-[#FF3B30] text-[10px] uppercase tracking-widest hover:bg-[#FF3B30] hover:text-white transition-all">
-        Kill Roblox
+      <button id="attachButton" onclick="handleAttach()" class="h-9 px-4 border border-[#1A1A1A] text-[#959595] text-[10px] uppercase tracking-widest hover:text-white hover:border-[#3A3A3A] transition-all">
+        Attach
+      </button>
+
+      <button onclick="handleExecute()" class="h-9 px-6 bg-white text-black font-bold text-[10px] uppercase tracking-widest hover:bg-[#E0E0E0] transition-all">
+        Execute
       </button>
 
       <button onclick="handleCopy()" class="h-9 px-4 border border-[#1A1A1A] text-[#959595] text-[10px] uppercase tracking-widest hover:text-white hover:border-[#3A3A3A] transition-all">

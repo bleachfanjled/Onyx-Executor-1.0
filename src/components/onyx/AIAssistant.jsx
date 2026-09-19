@@ -347,7 +347,7 @@ export default function AIAssistant({ open, onClose, getEditorContent, applyCode
           </button>
         </div>
         <p className="mt-2 text-[9px]" style={{ color: "#3A3A3A", letterSpacing: "0.1em" }}>
-          FIXES SCRIPTS OR GENERATES SCRIPTS, WON'T HELP WITH MALICIOUS CODE.
+          CAN DO ANYTHING BUT GENERATING MALICIOUS CODE.
         </p>
       </div>
 

@@ -28,7 +28,7 @@ export default function DownloadPage() {
     catch(() => setMacReleaseError(true));
   }, []);
 
-  const fileSize = release ? `${release.sizeMb} MB` : "—";
+  const fileSize = release ? `${release.sizeMb} 357 MB` : "—";
   const macFileSize = macRelease ? `${macRelease.sizeMb} MB` : "—";
   const winHash = release?.sha256 || null;
   const macHash = macRelease?.sha256 || null;
